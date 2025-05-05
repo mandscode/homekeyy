@@ -85,10 +85,7 @@ export interface Property {
 const PropertyList = () => {
     
     const fetchProperties = async () => {
-        const res = await api.get("/property", { headers: {
-            "Content-Type": "application/json",
-            "ngrok-skip-browser-warning": "true",
-        }});
+        const res = await api.get("/property");
 
         return res.data.properties ?? [];
     };

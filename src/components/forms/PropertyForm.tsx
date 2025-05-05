@@ -346,10 +346,7 @@ export default function PropertyForm() {
   ]
 
   const fetchAmenities = async () => {
-    const res = await api.get("/amenity",  { headers: {
-      "Content-Type": "application/json",
-      "ngrok-skip-browser-warning": "true",
-    }});
+    const res = await api.get("/amenity");
   
     // Ensure you return an array or default to an empty array
     return res.data.amenities ?? [];
