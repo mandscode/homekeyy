@@ -401,7 +401,11 @@ export default function PropertyForm() {
                       id={name}
                       type={type}
                       placeholder={label}
-                      {...form.register(name, { valueAsNumber: type === "number" })}
+                      min={type === "number" ? 0 : undefined} // HTML-level restriction
+                      {...form.register(name, {
+                        valueAsNumber: type === "number",
+                        min: type === "number" ? 0 : undefined, // React Hook Form validation
+                      })}
                     />
                   </div>
                 ))}

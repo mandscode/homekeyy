@@ -6,12 +6,19 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
+import api from "@/lib/axios"
+import { useQuery } from "@tanstack/react-query"
 
 interface ScheduleItem {
   serviceType: string
   day: string
   startTime: string
   endTime: string
+}
+
+interface ServiceItem {
+  id:number,
+  type:string
 }
 
 interface Props {
@@ -49,6 +56,17 @@ export default function ServiceSchedule({ schedulesProps, setSchedulesProps }: P
     updateSchedule(index, "endTime", value);
   };
 
+  const fetchServices = async () => {
+    const res = await api.get("/services");
+  
+    // Ensure you return an array or default to an empty array
+    return res.data.services ?? [];
+  };
+
+  const { data: services = [] } = useQuery({
+    queryKey: ["services"],
+    queryFn: fetchServices,
+  });
   return (
     <div className="space-y-3">
         <div className="flex flex-col gap-3">
@@ -77,9 +95,11 @@ export default function ServiceSchedule({ schedulesProps, setSchedulesProps }: P
               <SelectValue placeholder="Service type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Cleaning">Cleaning</SelectItem>
-              <SelectItem value="Security">Security</SelectItem>
-              <SelectItem value="Maintenance">Maintenance</SelectItem>
+              {
+                services.length > 0 && services.map((s:ServiceItem, idx:number) => (
+                  <SelectItem value={s.id.toString()} key={idx}>{s.type}</SelectItem>
+                ))
+              }
             </SelectContent>
           </Select>
 

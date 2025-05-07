@@ -78,7 +78,7 @@ export function UserNav() {
             });
         
             // Optional: Redirect to login page or home
-            window.location.href = "/login";
+            window.location.href = "/auth/login";
           }}
         >
           <LogOut className="w-4 h-4 mr-3 text-muted-foreground" />

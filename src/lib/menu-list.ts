@@ -2,7 +2,7 @@ import {
   Tag,
   Users,
   Settings,
-  Bookmark,
+  // Bookmark,
   LayoutGrid,
   LucideIcon,
   Building
@@ -44,25 +44,25 @@ export function getMenuList(pathname: string): Group[] {
     {
       groupLabel: "Contents",
       menus: [
+        // {
+        //   href: "",
+        //   label: "Properties",
+        //   icon: Building,
+        //   submenus: [
+        //     {
+        //       href: "/properties",
+        //       label: "All Properties"
+        //     },
+        //     {
+        //       href: "/properties/new",
+        //       label: "New Property"
+        //     }
+        //   ]
+        // },
         {
-          href: "",
+          href: "/properties",
           label: "Properties",
-          icon: Building,
-          submenus: [
-            {
-              href: "/properties",
-              label: "All Properties"
-            },
-            {
-              href: "/properties/new",
-              label: "New Property"
-            }
-          ]
-        },
-        {
-          href: "/categories",
-          label: "Categories",
-          icon: Bookmark
+          icon: Building
         },
         {
           href: "/tags",
