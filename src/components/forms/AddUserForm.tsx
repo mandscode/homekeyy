@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 
 
 import { PropertyModal } from "../ui/PropertySelectModal"
+import apiEndpoints from "@/lib/apiEndpoints"
 
 
 export const propertySchema = z.object({
@@ -35,9 +36,9 @@ export const serviceSchema = z.object({
 export const formSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email").optional(),
+  email: z.string().email("Invalid email").nullable().optional().or(z.literal('')),
   phone: z.string().min(10, "Phone is required"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters").nullable().optional().or(z.literal('')),
   role: z.enum(["SERVICE_MANAGER", "PROPERTY_MANAGER", "OWNER"]),
   status: z.boolean(),
   createdAt: z.string().optional(),
@@ -48,6 +49,33 @@ export const formSchema = z.object({
   }).min(1, "At least one property must be selected"),
   services: z.array(serviceSchema).optional()
 }).superRefine((data, ctx) => {
+  // Password validation for new users
+  if (!data.id && (!data.password || data.password === '')) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["password"],
+      message: "Password is required for new users"
+    });
+  }
+
+  // Password length validation when provided
+  if (data.password && data.password !== '' && data.password.length < 6) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["password"],
+      message: "Password must be at least 6 characters"
+    });
+  }
+
+  // Email validation when provided
+  if (data.email && data.email !== '' && !data.email.includes('@')) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["email"],
+      message: "Invalid email format"
+    });
+  }
+
   if (data.role === "SERVICE_MANAGER" && (!data.services || data.services.length === 0)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -81,15 +109,13 @@ type User = {
   name:      string;
   email?:     string;
   phone:     string;
-  password:  string;
+  password?:  string | null;
   role:      Role;
   status:    boolean;
   createdAt?: string;
   updatedAt?:  string;
   isFirstLogin?: boolean;
-
   propertyId:     number[];
-
   services?: Service[];
 }
 
@@ -103,44 +129,80 @@ type Role =
   'PROPERTY_MANAGER' |
   'OWNER'
 
-export default function AddUserForm({ setOpen }: { setOpen: (open: boolean) => void }) {
+type FormData = z.infer<typeof formSchema>;
+
+export default function AddUserForm({ setOpen, userId }: { setOpen: (open: boolean) => void, userId?: number | null }) {
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
-  const [isServicesHide , setServicesHide] = useState(false)
-
+  const [isServicesHide, setServicesHide] = useState(false)
   const [propertyModalOpen, setPropertyModalOpen] = useState(false);
 
-
-  const form = useForm({
+  const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: { services: [] }
+    defaultValues: { 
+      services: [],
+      password: '',
+      status: true
+    }
   })
 
-  const onSubmit = async (data:User) => {
-    
+  // Fetch user data if userId is provided
+  const { data: userData } = useQuery({
+    queryKey: ["user", userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      const res = await api.get(`/web/user/${userId}`);
+      return res.data.user;
+    },
+    enabled: !!userId
+  });
+
+  // Update form when user data is loaded
+  useEffect(() => {
+    if (userData) {
+      form.reset({
+        id: userData.id,
+        name: userData.name,
+        email: userData.email || '',
+        phone: userData.phone,
+        role: userData.role,
+        status: userData.status,
+        propertyId: userData.properties?.map((p: any) => p.propertyId) || [],
+        services: userData.services || [],
+        isFirstLogin: userData.isFirstLogin,
+        password: '' // Set empty password for edit mode
+      });
+    }
+  }, [userData, form]);
+  console.log(userData, "userData")
+  const onSubmit = async (data: FormData) => {
     setLoading(true)
-    
     try {
-    
       const payload = {
-        ...data
+        ...data,
+        password: data.password === '' ? undefined : data.password
       };
 
-      const response = await api.post("/user", payload)
+      // If id exists, update user; otherwise create new user
+      const response = data.id 
+        ? await api.put(`/web/user/${data.id}`, payload)
+        : await api.post("/web/user", payload);
       
-      if (response.status == 1) {
-        setOpen(false)
+      if (response.status === 1) {
+        toast({
+          title: data.id ? "User updated successfully" : "User created successfully"
+        });
+        setOpen(false);
       }
     } catch (err: unknown) {
-      let message = " ";
-
-      if (typeof err === "object" && err !== null && "message" in err) {
-        message = String((err as { message: unknown }).message);
+      let message = data.id ? "Failed to update user" : "Failed to create user";
+      if (err instanceof Error) {
+        message = err.message;
       }
       toast({
-        title: message
+        title: message,
+        variant: "destructive"
       });
-      console.error("Add user failed", err)
     } finally {
       setLoading(false)
     }
@@ -175,11 +237,11 @@ export default function AddUserForm({ setOpen }: { setOpen: (open: boolean) => v
     { name: "propertyId", label: "Properties" },
     { name: "status", label: "Status" },
     { name: "phone", label: "Phone Number" },
-    { name: "password", label: "Password" },
+    ...(userId ? [] : [{ name: "password" as keyof z.infer<typeof formSchema>, label: "Password" }]),
   ]
 
   const fetchServices = async () => {
-    const res = await api.get("/services");
+    const res = await api.get("/web/services");
   
     // Ensure you return an array or default to an empty array
     return res.data.services ?? [];
@@ -191,7 +253,7 @@ export default function AddUserForm({ setOpen }: { setOpen: (open: boolean) => v
   });
 
   const fetchProperties = async () => {
-    const res = await api.get("/property");
+    const res = await api.get(apiEndpoints.Property.endpoints.getAllProperties.path);
   
     // Ensure you return an array or default to an empty array
     return res.data.properties ?? [];

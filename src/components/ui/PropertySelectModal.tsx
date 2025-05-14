@@ -45,8 +45,8 @@ export function PropertyModal({ open, onOpenChange, selected, onDone, options }:
                   onCheckedChange={() => toggle(option.value)}
                 />
                 {option.label.length > 25 
-                                ? `${option.label.substring(0, 20)}...` 
-                                : option.label}
+                    ? `${option.label.substring(0, 20)}...` 
+                    : option.label}
                 </label>
             ))}
           </div>

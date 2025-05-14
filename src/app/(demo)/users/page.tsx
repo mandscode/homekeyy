@@ -9,7 +9,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "@/components/ui/breadcrumb";
-import PropertyManagerTable from "@/components/layout/PropertyManagerTable";
+import UserListTable from "@/components/layout/UserListTable";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { UserModal } from "@/components/ui/user-modal";
@@ -44,7 +44,7 @@ export default function UsersPage() {
           </Button>
         </div>
       </Breadcrumb>
-      <PropertyManagerTable/>
+      <UserListTable />
 
       <UserModal open={open} onOpenChange={setOpen} />
     </ContentLayout>

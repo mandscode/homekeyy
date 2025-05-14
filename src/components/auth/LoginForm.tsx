@@ -13,6 +13,7 @@ import Cookies from "js-cookie"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
+import apiEndpoints from "@/lib/apiEndpoints"
 
 export default function LoginForm() {
   const [loading, setLoading] = useState(false)
@@ -55,7 +56,7 @@ export default function LoginForm() {
   const onSubmit = async (data: LoginFormValues) => {
     setLoading(true)
     try {
-      const response = await api.post("/auth/login", data)
+      const response = await api.post(apiEndpoints["Auth"].endpoints.login.path, data)
       const { token, isFirstLogin } = response.data
       
       if (isFirstLogin) {
@@ -90,7 +91,12 @@ export default function LoginForm() {
   const onRecoverSubmit = async (data: recoverPasswordValues) => {
     setLoading(true)
     try {
-      const response = await api.post("/auth/recover-pass", data)
+      const payload = {...data};
+      if (!payload.email) {
+        delete payload.email;
+      }
+      
+      const response = await api.post(apiEndpoints.Auth.endpoints.recoverPassword.path, payload)
       if(response.status == 1) {
         setForgotPassDialog(false)
         toast({
@@ -123,13 +129,13 @@ export default function LoginForm() {
         throw new Error('No authentication token found');
       }
       
-      await api.put("/user", { phone:userId, password:newPassword, isFirstLogin:false }, {
+      await api.put(apiEndpoints.Auth.endpoints.changePassword.path, { phone:userId, password:newPassword, isFirstLogin:false }, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       })
       
-      const response = await api.post("/auth/login", { phone: userId, password: newPassword })
+      const response = await api.post(apiEndpoints.Auth.endpoints.login.path, { phone: userId, password: newPassword })
       Cookies.set('token', response.data.token, {
         path: '/',         // ensure it's available to all routes
         sameSite: 'strict',
@@ -216,9 +222,8 @@ export default function LoginForm() {
             <div className="relative mt-2">
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input {...registerRecover("email")} placeholder="Email" className="pl-9" />
+                <Input {...registerRecover("email")} placeholder="Email (optional)" className="pl-9" />
               </div>
-              {recoverErrors.email && <p className="text-sm text-red-500">{recoverErrors.email.message}</p>}
             </div>
 
             {/* Name */}

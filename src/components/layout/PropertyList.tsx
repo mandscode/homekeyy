@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 import { useQuery } from "@tanstack/react-query"
 import api from "@/lib/axios";
+import apiEndpoints from "@/lib/apiEndpoints";
 
 // const properties = [
 //   {
@@ -85,7 +86,7 @@ export interface Property {
 const PropertyList = () => {
     
     const fetchProperties = async () => {
-        const res = await api.get("/property");
+        const res = await api.get(apiEndpoints.Property.endpoints.getAllProperties.path);
 
         return res.data.properties ?? [];
     };
@@ -94,7 +95,6 @@ const PropertyList = () => {
         queryKey: ["properties"],
         queryFn: fetchProperties,
     });
-
   return (
     <Card className="rounded-lg border-none mt-6">
       <CardContent className="p-6">

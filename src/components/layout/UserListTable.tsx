@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import api from '@/lib/axios'
 import { useQuery } from '@tanstack/react-query'
+import apiEndpoints from '@/lib/apiEndpoints'
+import { Button } from '@/components/ui/button'
+import { UserModal } from '../ui/user-modal'
 
 
 type Property = {
@@ -58,10 +61,12 @@ const tabs = [
 
 const PER_PAGE = 6
 
-export default function PropertyManagerTable() {
+export default function UserListTable() {
   const [activeTab, setActiveTab] = useState('ALL')
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const [usersApiData, setUsersApiData] = useState<UserTable[]>([])
 
@@ -77,7 +82,7 @@ export default function PropertyManagerTable() {
   const totalPages = Math.ceil(filteredData.length / PER_PAGE)
 
   const fetchUsers = async () => {
-    const res = await api.get("/user");
+    const res = await api.get(apiEndpoints.User.endpoints.getAllUsers.path);
     return res.data.users ?? [];
   };
 
@@ -171,7 +176,21 @@ export default function PropertyManagerTable() {
                   <td className="p-4">{row.role}</td>
                   <td className="p-4">{row.properties}</td>
                   <td className="p-4 text-green-600">{row.status}</td>
-                  <td className="p-4 text-blue-500 cursor-pointer">Edit</td>
+                  <td className="p-4">
+                    <Button 
+                      variant="link" 
+                      className="text-blue-600 px-0 text-sm"
+                      onClick={() => {
+                        const user = users.find((u:User) => u.name === row.name && u.phone === row.phone);
+                        if (user) {
+                          setSelectedUserId(user.id);
+                          setIsModalOpen(true);
+                        }
+                      }}
+                    >
+                      Edit
+                    </Button>
+                  </td>
                 </tr>
               ))
             )}
@@ -209,6 +228,11 @@ export default function PropertyManagerTable() {
           </button>
         </div>
       )}
+      <UserModal 
+        open={isModalOpen} 
+        onOpenChange={setIsModalOpen} 
+        userId={selectedUserId}
+      />
     </div>
   )
 }
