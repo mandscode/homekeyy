@@ -12,6 +12,12 @@ interface UserModalProps {
 }
 
 export function UserModal({ open, onOpenChange, userId }: UserModalProps) {
+  const handleFormSubmit = (success: boolean) => {
+    if (success) {
+      onOpenChange(false);
+    }
+  };
+
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -31,7 +37,7 @@ export function UserModal({ open, onOpenChange, userId }: UserModalProps) {
           </div>
 
           <div>
-            <AddUserForm setOpen={onOpenChange} userId={userId} />
+            <AddUserForm setOpen={handleFormSubmit} userId={userId} />
           </div>
         </Dialog.Content>
       </Dialog.Portal>

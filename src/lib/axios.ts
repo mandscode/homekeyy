@@ -18,8 +18,13 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (response) => response.data,
     (error) => {
-        if (error.response?.status === 401) {
-            // Handle unauthorized
+        if (error.response?.status === 401 || 
+            (error.response?.data?.success === false && 
+             error.response?.data?.message === "Not authorized. Invalid token.")) {
+            // Clear all cookies
+            Cookies.remove('token');
+            // Redirect to login page
+            window.location.href = '/auth/login';
         }
         return Promise.reject(error.response?.data || error)
     }

@@ -34,7 +34,6 @@ const formSchema = z.object({
     .string()
     .min(1, { message: "City is required" }),
 
-
   zipCode: z
     .string()
     .min(1, { message: "ZIP Code is required" }),
@@ -46,15 +45,6 @@ const formSchema = z.object({
   longitude: z
     .string()
     .min(1, { message: "Longitude is required" }),
-
-  totalMotors: z
-    .number({ invalid_type_error: "Total motors must be a number" }),
-
-  mainMeters: z
-    .number({ invalid_type_error: "Main meters must be a number" }),
-
-  subMeters: z
-    .number({ invalid_type_error: "Sub meters must be a number" }),
 
   amenities: z
     .array(z.object({
@@ -97,7 +87,7 @@ const formSchema = z.object({
         z.literal("notice"),
         z.literal("occupied"),
       ])
-    }))
+    })),
 });
 
 
@@ -136,9 +126,6 @@ type Property = {
   zipCode: string;
   latitude: string;
   longitude: string;
-  totalMotors: number;
-  mainMeters: number;
-  subMeters: number;
   amenities: Amenity[];
   images: PropertyImage[];
   serviceSchdule: ServiceSchedule[];
@@ -204,11 +191,22 @@ export default function PropertyForm() {
   
   const form = useForm({
     resolver: zodResolver(formSchema),
-    defaultValues: { amenities: [], images: [], serviceSchdule: [] }
+    defaultValues: {
+      propertyName: '',
+      address: '',
+      city: '',
+      zipCode: '',
+      latitude: '',
+      longitude: '',
+      amenities: [],
+      images: [],
+      serviceSchdule: [],
+      flatDetails: []
+    }
   })
 
   const onSubmit = (data:Property) => {
-    console.log(data, "summary")
+    console.log(data)
     setStep("summary")
   }
   
@@ -270,9 +268,13 @@ export default function PropertyForm() {
         flatDetails: enhancedFlatDetails,
       };
 
+
       const response = await api.post("/property/register", payload)
       
       if (response.status == 1) {
+        toast({
+          title: "Property listed successfully"
+        })
         setStep("form")
       }
     } catch (err: unknown) {
@@ -290,7 +292,7 @@ export default function PropertyForm() {
   }
 
   const uploadImagesToS3 = async (images: UploadImage[], entityName: string, entityId: string | number): Promise<UploadedImage[]> => {
-    console.log(images)
+
     const uploaded = await Promise.all(
       images.map(async (img) => {
         const formData = new FormData();
@@ -346,10 +348,14 @@ export default function PropertyForm() {
   ]
 
   const fetchAmenities = async () => {
-    const res = await api.get("/amenity");
-  
-    // Ensure you return an array or default to an empty array
-    return res.data.amenities ?? [];
+    const res = await api.get("/web/property/amenity");
+    const amenities = res.data.amenities.map((amenity: Amenity) => ({
+      ...amenity,
+      forProperty: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }));
+    return amenities ?? [];
   };
 
   const { data: amenities = [] } = useQuery({
@@ -389,48 +395,70 @@ export default function PropertyForm() {
             <div className="space-y-6">
               <div className="flex flex-col gap-7">
                 <Label>Amenities</Label>
+                {/* Number type amenities */}
                 <div className="grid grid-cols-3 gap-6">
-                {([
-                  { name: "totalMotors" as const, label: "Total Motors", type: "number" },
-                  { name: "mainMeters" as const, label: "Main Meters", type: "number" },
-                  { name: "subMeters" as const, label: "Sub Meters", type: "number" },
-                ] as FormField[]).map(({ name, label, type = "text" }) => (
-                  <div key={name} className="flex flex-col gap-3">
-                    <Label htmlFor={name}>{label}</Label>
-                    <Input
-                      id={name}
-                      type={type}
-                      placeholder={label}
-                      min={type === "number" ? 0 : undefined} // HTML-level restriction
-                      {...form.register(name, {
-                        valueAsNumber: type === "number",
-                        min: type === "number" ? 0 : undefined, // React Hook Form validation
-                      })}
-                    />
-                  </div>
-                ))}
-              </div>
+                  {amenities
+                    .filter((item: Amenity) => item.type === 'number')
+                    .map((item: Amenity) => {
+                      const fieldName = item.name.toLowerCase().replace(/\s+/g, '');
+                      return (
+                        <div key={item.id} className="flex flex-col gap-3">
+                          <Label htmlFor={fieldName}>{item.name}</Label>
+                          <Input
+                            id={fieldName}
+                            type="number"
+                            placeholder={item.name}
+                            min={0}
+                            defaultValue={0}
+                            onChange={(e) =>  {
+                              const updated = e.target.value
+                                ? [...form.getValues("amenities"), {
+                                    ...item,
+                                    forProperty: true,
+                                    createdAt: new Date().toISOString(),
+                                    updatedAt: new Date().toISOString(),
+                                    value: e.target.value
+                                  }]
+                                : form.getValues("amenities").filter((i: Amenity) => i.id !== item.id);
+
+                              form.setValue("amenities", updated);
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                </div>
+
+                {/* Boolean type amenities */}
                 <div className="grid grid-cols-3 gap-6">
-                {amenities.map((item: Amenity) => {
-                  const selectedAmenities = form.watch("amenities") || [];
+                  {amenities
+                    .filter((item: Amenity) => item.type === 'boolean')
+                    .map((item: Amenity) => {
+                      const selectedAmenities = form.watch("amenities") || [];
+                      const isSelected = selectedAmenities.some((i) => i.id === item.id);
+                      
+                      return (
+                        <label key={item.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={(checked) => {
+                              const updated = checked
+                                ? [...selectedAmenities, {
+                                    ...item,
+                                    forProperty: true,
+                                    createdAt: new Date().toISOString(),
+                                    updatedAt: new Date().toISOString(),
+                                    value: checked ? "true" : "false"
+                                  }]
+                                : selectedAmenities.filter((i: Amenity) => i.id !== item.id);
 
-                  return (
-                    <label key={item.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        checked={selectedAmenities.some((i) => i.id === item.id)}
-                        onCheckedChange={(checked) => {
-                          const updated = checked
-                            ? [...selectedAmenities, item]
-                            : selectedAmenities.filter((i) => i.id !== item.id);
-
-                          form.setValue("amenities", updated);
-                        }}
-                      />
-                      <span>{item.name}</span>
-                    </label>
-                  );
-                })}
-
+                              form.setValue("amenities", updated);
+                            }}
+                          />
+                          <span>{item.name}</span>
+                        </label>
+                      );
+                    })}
                 </div>
               </div>
             </div>
@@ -453,8 +481,8 @@ export default function PropertyForm() {
             <div className="space-y-6">
               {form.getValues() ? (
                 <>
-                  <h2 className="text-xl font-semibold">Listing Summary</h2>
-                  {/* <pre className="bg-gray-100 p-4 rounded overflow-auto max-h-[400px]">
+                  {/* <h2 className="text-xl font-semibold">Listing Summary</h2>
+                  <pre className="bg-gray-100 p-4 rounded overflow-auto max-h-[400px]">
             {JSON.stringify(form.getValues(), null, 2)}
           </pre> */}
                   <PropertyInfo data={form.getValues() as PropertyData} onImagesChange={setFlatImages}/>

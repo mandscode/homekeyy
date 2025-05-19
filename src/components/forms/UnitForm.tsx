@@ -16,7 +16,16 @@ import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import FullScreenLoader from "../utils/FullScreenLoader"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
+import Image from "next/image"
 
+type Amenity = {
+  amenityId: number;
+  amenity: AmenityValue;
+  amenityValue: string | number;
+};
+type AmenityValue = {
+  name: string;
+};
 const formSchema = z.object({
   number: z.string().min(1, "Unit number is required"),
   floor: z.string().min(1, "Floor is required"),
@@ -30,6 +39,11 @@ const formSchema = z.object({
   meterBox: z.string().optional(),
   initialMeterReading: z.string().optional(),
   status: z.enum(["AVAILABLE", "BOOKED", "OCCUPIED", "NOTICE_PERIOD"]),
+  rent: z.string().min(1, "Rent amount is required"),
+  sercurityDeposit: z.string().min(1, "Security deposit is required"),
+  rentalType: z.enum(['monthly', 'yearly']),
+  effective_from: z.string().min(1, "Effective from date is required"),
+  effective_to: z.string().min(1, "Effective to date is required"),
   amenities: z.array(z.object({
     id: z.number(),
     name: z.string(),
@@ -43,7 +57,56 @@ const formSchema = z.object({
   }))
 });
 
-type UnitFormData = z.infer<typeof formSchema>;
+
+type FlatImage = {
+  id:number;
+  url:string;
+  alt:string;
+  type:string;
+}
+
+type UnitAmenity = {
+  id: number;
+  amenity: UnitAmenityForm;
+  amenityValue: string | number;
+}
+
+type UnitAmenityForm = {
+  id: number;
+  name: string;
+  value: string;
+}
+
+type UnitFormData = {
+  number: string;
+  floor: string;
+  block: string;
+  sqFt: string;
+  rooms: string;
+  bathrooms: string;
+  parkingNumber: string;
+  gasConnection: boolean;
+  powerBackup: boolean;
+  meterBox?: string;
+  initialMeterReading?: string;
+  status: "AVAILABLE" | "BOOKED" | "OCCUPIED" | "NOTICE_PERIOD";
+  rent: string;
+  sercurityDeposit: string;
+  rentalType: 'monthly' | 'yearly';
+  effective_from: string;
+  effective_to: string;
+  amenities: Array<{
+    id: number;
+    name: string;
+    value: string;
+  }>;
+  images: Array<{
+    url: string;
+    name: string;
+    type: string;
+    size: number;
+  }>;
+};
 
 type FormField = {
   name: keyof UnitFormData
@@ -68,7 +131,10 @@ export default function UnitForm({ unitId }: UnitFormProps) {
       images: [],
       gasConnection: false,
       powerBackup: false,
-      status: "AVAILABLE"
+      status: "AVAILABLE",
+      rentalType: "monthly",
+      effective_from: new Date().toISOString().split('T')[0],
+      effective_to: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
     }
   })
 
@@ -86,6 +152,7 @@ export default function UnitForm({ unitId }: UnitFormProps) {
 
   // Update form when unit data is loaded
   useEffect(() => {
+    console.log(unitData, "unitDataa")
     if (unitData) {
       const formData = {
         number: unitData.number || "",
@@ -100,21 +167,24 @@ export default function UnitForm({ unitId }: UnitFormProps) {
         meterBox: unitData.meterBox || "",
         initialMeterReading: unitData.initialMeterReading || "",
         status: unitData.status || "AVAILABLE",
-        amenities: unitData.unitAmenities?.map((amenity: any) => ({
+        rent: unitData.unitRentalDetails?.[0]?.rent?.toString() || "",
+        sercurityDeposit: unitData.unitRentalDetails?.[0]?.sercurityDeposit?.toString() || "",
+        rentalType: unitData.unitRentalDetails?.[0]?.rentalType || "monthly",
+        effective_from: unitData.unitRentalDetails?.[0]?.effective_from?.split('T')[0] || new Date().toISOString().split('T')[0],
+        effective_to: unitData.unitRentalDetails?.[0]?.effective_to?.split('T')[0] || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+        amenities: unitData.unitAmenities?.map((amenity: Amenity) => ({
           id: amenity.amenityId,
-            name: amenity.amenity.name,
+          name: amenity.amenity.name,
           value: amenity.amenityValue
         })) || [],
-        images: unitData.images?.map((img: any) => ({
+        images: unitData.images?.map((img: FlatImage) => ({
           url: img.url,
           name: img.alt || "unit-image",
           type: img.type || "image/jpeg",
           size: 0
         })) || []
       };
-
-      console.log("Form Data:", formData); // Debug log
-      form.reset(formData);
+      form.reset(formData as UnitFormData);
     }
   }, [unitData, form]);
 
@@ -124,6 +194,23 @@ export default function UnitForm({ unitId }: UnitFormProps) {
       // Handle image uploads first
       const uploadedImages = await uploadImagesToS3(images, "unit", data.number);
       
+      const rentalDetailsData = {
+        rent: Number(data.rent),
+        sercurityDeposit: Number(data.sercurityDeposit),
+        rentalType: data.rentalType,
+        effective_from: new Date(data.effective_from).toISOString(),
+        effective_to: new Date(data.effective_to).toISOString()
+      };      
+
+      // Remove duplicate amenities
+      const uniqueAmenities = data.amenities.reduce((acc, current) => {
+        const exists = acc.find(item => item.id === current.id);
+        if (!exists) {
+          acc.push(current);
+        }
+        return acc;
+      }, [] as typeof data.amenities);
+
       const payload = {
         number: data.number,
         floor: data.floor,
@@ -137,12 +224,30 @@ export default function UnitForm({ unitId }: UnitFormProps) {
         meterBox: data.meterBox,
         initialMeterReading: data.initialMeterReading,
         status: data.status,
-        unitAmenities: {
-          create: data.amenities.map(amenity => ({
-            amenityId: amenity.id,
-            amenityValue: amenity.value
-          }))
-        },
+        unitRentalDetails: unitId && unitData?.unitRentalDetails?.[0]?.id 
+          ? {
+              update: {
+                where: { id: unitData.unitRentalDetails[0].id },
+                data: rentalDetailsData
+              }
+            }
+          : {
+              create: rentalDetailsData
+            },
+        unitAmenities: unitId
+          ? {
+              deleteMany: {},
+              create: uniqueAmenities.map(amenity => ({
+                amenityId: amenity.id,
+                amenityValue: amenity.value
+              }))
+            }
+          : {
+              create: uniqueAmenities.map(amenity => ({
+                amenityId: amenity.id,
+                amenityValue: amenity.value
+              }))
+            },
         images: {
           create: uploadedImages.map(img => ({
             url: img.url,
@@ -230,6 +335,11 @@ export default function UnitForm({ unitId }: UnitFormProps) {
     form.setValue('images', validFiles, { shouldValidate: true });
   }
 
+  const rentalTypeOptions = [
+    { value: "monthly", label: "Monthly" },
+    { value: "yearly", label: "Yearly" }
+  ];
+
   const formFields: FormField[] = [
     { name: "number", label: "Unit Number" },
     { name: "floor", label: "Floor" },
@@ -250,16 +360,13 @@ export default function UnitForm({ unitId }: UnitFormProps) {
         { value: "OCCUPIED", label: "Occupied" },
         { value: "NOTICE_PERIOD", label: "Notice Period" }
       ]
-    }
+    },
+    { name: "rent", label: "Rent Amount", type: "text" },
+    { name: "sercurityDeposit", label: "Security Deposit", type: "text" },
+    { name: "rentalType", label: "Rental Type", type: "select", options: rentalTypeOptions },
+    { name: "effective_from", label: "Effective From", type: "text" },
+    { name: "effective_to", label: "Effective To", type: "text" }
   ];
-
-  const { data: amenities = [] } = useQuery({
-    queryKey: ["amenities"],
-    queryFn: async () => {
-      const res = await api.get("/amenity");
-      return res.data.amenities ?? [];
-    }
-  });
 
   if (isLoadingUnit) {
     return <FullScreenLoader />;
@@ -279,7 +386,7 @@ export default function UnitForm({ unitId }: UnitFormProps) {
                     <Label htmlFor={name}>{label}</Label>
                     {type === "select" && options ? (
                       <Select
-                        onValueChange={(value) => form.setValue(name, value as any)}
+                        onValueChange={(value) => form.setValue(name, value)}
                         value={form.watch(name) as string}
                       >
                         <SelectTrigger>
@@ -328,28 +435,69 @@ export default function UnitForm({ unitId }: UnitFormProps) {
               <div className="flex flex-col gap-3">
                 <Label>Amenities</Label>
                 <div className="grid grid-cols-3 gap-4">
-                  {amenities.map((item: any) => {
+                  {unitData?.unitAmenities?.map((item:  UnitAmenity) => {
                     const selectedAmenities = form.watch("amenities") || [];
-                    const isSelected = selectedAmenities.some((a) => a.id === item.id);
+                    const isSelected = selectedAmenities.some((a) => a.id === item.amenity.id);
 
                     return (
-                      <label key={item.id} className="flex items-center space-x-2">
+                      <label key={item.amenity.id} className="flex items-center space-x-2">
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={(checked) => {
                             const updated = checked
-                              ? [...selectedAmenities, { id: item.id, name: item.name, value: "true" }]
-                              : selectedAmenities.filter((a) => a.id !== item.id);
+                              ? [...selectedAmenities, { id: item.amenity.id, name: item.amenity.name, value: "true" }]
+                              : selectedAmenities.filter((a) => a.id !== item.amenity.id);
 
                             form.setValue("amenities", updated);
                           }}
                         />
-                        <span>{item.name}</span>
+                        <span>{item.amenity.name}</span>
                       </label>
                     );
                   })}
                 </div>
               </div>
+              <div className="flex flex-wrap gap-4">
+                {/* Show existing images */}
+                {unitData?.images?.map((img: FlatImage, idx: number) => (
+                  <div key={`existing-${idx}`} className="w-28 h-28 overflow-hidden rounded relative bg-gray-100">
+                    <Image
+                      src={img.url}
+                      alt={img.alt || 'Unit image'}
+                      fill
+                      sizes="(max-width: 112px) 100vw, 112px"
+                      className="object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=';
+                      }}
+                      unoptimized
+                    />
+                  </div>
+                ))}
+                
+                {/* Show newly uploaded images */}
+                {images.map((file, idx) => (
+                  <div key={`new-${idx}`} className="w-28 h-28 overflow-hidden rounded relative bg-gray-100">
+                    <Image
+                      src={URL.createObjectURL(file)}
+                      alt={`Uploaded image ${idx + 1}`}
+                      fill
+                      sizes="(max-width: 112px) 100vw, 112px"
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                ))}
+
+                {/* Show "No images" message only if there are no images at all */}
+                {(!unitData?.images || unitData.images.length === 0) && images.length === 0 && (
+                  <div className="w-28 h-28 overflow-hidden rounded bg-gray-100 flex items-center justify-center text-gray-400">
+                    No images
+                  </div>
+                )}
+              </div>
+
 
               <div className="flex flex-col gap-3">
                 <Label>Images</Label>

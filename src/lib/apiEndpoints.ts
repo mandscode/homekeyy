@@ -14,7 +14,7 @@ const apiEndpoints = {
         },
         getPropertyById: {
           method: "GET",
-          path: "/api/v1/property/{id}",
+          path: "/web/property/{id}",
           description: "Get a property by ID",
         },
         updateProperty: {

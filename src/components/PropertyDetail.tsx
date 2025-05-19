@@ -11,6 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/axios';
 import { useParams } from 'next/navigation';
 import { UnitModal } from './ui/unit-modal';
+import apiEndpoints from '@/lib/apiEndpoints';
 
 type Amenity = {
   id: number;
@@ -28,8 +29,10 @@ interface StatusCounts {
   occupied: number;
 }
 
-export type PropertyData = {
-  propertyAmenities: Amenity[];
+type PropertyData = {
+  propertyAmenities: {
+    amenity: Amenity;
+  }[];
   images: {
     id: number;
     propertyId: number;
@@ -39,8 +42,10 @@ export type PropertyData = {
     updatedAt: string;
   }[];
   serviceSchedules: {
-    serviceType: string;
-    day: string;
+    service: {
+      type: string;
+    };
+    dayOfWeek: string;
     startTime: string;
     endTime: string;
   }[];
@@ -87,8 +92,6 @@ const FlatStatusBadge = ({ status }: { status: string }) => {
   );
 };
 
-// type FlatImages = Record<string, File[]>;
-
 export default function PropertyDetail() {
   const [flatImages, setFlatImages] = useState<Record<string, File[]>>({});
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
@@ -99,7 +102,7 @@ export default function PropertyDetail() {
   const id = params.id as string;
 
   const fetchProperty = async (): Promise<PropertyData> => {
-    const res = await api.get(`/property/${id}`);
+    const res = await api.get(apiEndpoints.Property.endpoints.getPropertyById.path.replace("{id}", id));
     return res.data.property ?? {
       propertyAmenities: [],
       images: [],
@@ -134,19 +137,16 @@ export default function PropertyDetail() {
     subMeters: 0,
     units: [],
   } } = useQuery<PropertyData>({
-    queryKey: ["property"],
+    queryKey: ["property", id],
     queryFn: fetchProperty,
   });
-  property.units.map(unit => {
-    console.log(unit); // check this
-  })
+  console.log(property, "property")
   
   const uniqueFloors = [...new Set(property.units.map(flat => flat.floor))];
-
   const filteredFlats = selectedFloor && property.units
   ? property.units.filter((flat:FlatDetails) => flat.floor.toString() === selectedFloor.toString())
   : property.units;
-
+  
   const statusCounts = property.units.reduce<StatusCounts>(
     (acc, flat:FlatDetails) => {
       const key = flat.status.toLowerCase() as FlatStatus; // normalize keys
@@ -166,6 +166,7 @@ export default function PropertyDetail() {
   
     setFlatImages(updated); // pass back 
   };
+  
 
   return (
     <>
@@ -200,16 +201,26 @@ export default function PropertyDetail() {
         <h3 className="font-medium mb-2">Images</h3>
         <div className="flex gap-4 flex-wrap">
           {property.images.map((img, idx) => (
-            <div key={idx} className="w-28 h-28 overflow-hidden rounded">
+            <div key={idx} className="w-28 h-28 overflow-hidden rounded relative bg-gray-100">
               <Image
                 src={img.url}
-                alt={img.alt}
-                width={112}
-                height={112}
+                alt={img.alt || 'Property image'}
+                fill
+                sizes="(max-width: 112px) 100vw, 112px"
                 className="object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=';
+                }}
+                unoptimized
               />
             </div>
           ))}
+          {property.images.length === 0 && (
+            <div className="w-28 h-28 overflow-hidden rounded bg-gray-100 flex items-center justify-center text-gray-400">
+              No images
+            </div>
+          )}
         </div>
       </div>
   
@@ -218,7 +229,7 @@ export default function PropertyDetail() {
         <div className="flex flex-wrap gap-2">
           {property.propertyAmenities.map((amenity, index) => (
             <Badge key={index} className="bg-red-100 text-red-600 text-base">
-              {amenity.name}
+              {amenity.amenity.name}
             </Badge>
           ))}
         </div>
@@ -237,8 +248,8 @@ export default function PropertyDetail() {
         </div>
         {property.serviceSchedules.map((item, idx) => (
             <div key={idx} className="grid grid-cols-[30%_30%_40%] gap-3 mt-2 items-center">
-              <div>{item.serviceType}</div>
-              <Input disabled defaultValue={item.day} className="w-full" />
+              <div>{item.service.type}</div>
+              <Input disabled defaultValue={item.dayOfWeek} className="w-full" />
               <div className="flex justify-between items-center w-full">
               <span className="flex items-center justify-between w-1/3">
                   {item.startTime} <Clock size={16} />

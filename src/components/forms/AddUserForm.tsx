@@ -103,6 +103,14 @@ type Property = {
   zipCode: string;
 };
 
+type PropertyProps = {
+  propertyId:number;
+  name: string;
+  address: string;
+  city: string;
+  zipCode: string;
+};
+
 
 type User = {
   id?:        number;
@@ -167,14 +175,14 @@ export default function AddUserForm({ setOpen, userId }: { setOpen: (open: boole
         phone: userData.phone,
         role: userData.role,
         status: userData.status,
-        propertyId: userData.properties?.map((p: any) => p.propertyId) || [],
+        propertyId: userData.properties?.map((p: PropertyProps) => p.propertyId) || [],
         services: userData.services || [],
         isFirstLogin: userData.isFirstLogin,
         password: '' // Set empty password for edit mode
       });
     }
   }, [userData, form]);
-  console.log(userData, "userData")
+
   const onSubmit = async (data: FormData) => {
     setLoading(true)
     try {
