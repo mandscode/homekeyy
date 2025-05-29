@@ -10,6 +10,7 @@ export default function QuantitySelector({ value, onChange, quantity }: Quantity
   return (
     <div className="flex items-center border rounded-md overflow-hidden">
       <Button 
+        type="button"
         variant="ghost" 
         className="rounded-none px-2 text-sm h-8"
         onClick={() => onChange(Math.max(0, value - 1))}
@@ -18,6 +19,7 @@ export default function QuantitySelector({ value, onChange, quantity }: Quantity
       </Button>
       <div className="w-8 text-center text-sm font-normal">{quantity}</div>
       <Button 
+        type="button"
         variant="ghost" 
         className="rounded-none px-2 text-sm h-8"
         onClick={() => onChange(value + 1)}
