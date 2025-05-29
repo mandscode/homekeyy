@@ -15,7 +15,7 @@ import {
   TooltipContent,
   TooltipProvider
 } from "@/components/ui/tooltip";
-
+import Cookies from "js-cookie";
 interface MenuProps {
   isOpen: boolean | undefined;
 }
@@ -118,7 +118,15 @@ export function Menu({ isOpen }: MenuProps) {
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <Button
-                    onClick={() => {}}
+                    onClick={() => {
+                      // Remove all cookies
+                      Object.keys(Cookies.get()).forEach((cookieName) => {
+                        Cookies.remove(cookieName);
+                      });
+                  
+                      // Optional: Redirect to login page or home
+                      window.location.href = "/auth/login";
+                    }}
                     variant="outline"
                     className="w-full justify-center h-10 mt-5"
                   >

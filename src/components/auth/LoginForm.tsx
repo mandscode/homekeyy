@@ -184,7 +184,7 @@ export default function LoginForm() {
           "Login"
         )}
         </Button>
-        <Button variant="ghost" className="w-full text-sm" onClick={() => setForgotPassDialog(true)}>
+        <Button variant="ghost" type="button" className="w-full text-sm" onClick={() => setForgotPassDialog(true)}>
           Forgot your password?
         </Button>
       </form>
