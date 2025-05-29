@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import apiEndpoints from "@/lib/apiEndpoints"
+import FullScreenLoader from "../utils/FullScreenLoader"
 
 export default function LoginForm() {
   const [loading, setLoading] = useState(false)
@@ -64,6 +65,10 @@ export default function LoginForm() {
         Cookies.set("tempToken", token, { expires: 1 })
         setShowDialog(true)
       } else {
+        toast({
+          title: "Login successful",
+          description: "You are now logged in"
+        })
         Cookies.set('token', response.data.token, {
           path: '/',         // ensure it's available to all routes
           sameSite: 'strict',
@@ -73,18 +78,18 @@ export default function LoginForm() {
         router.push("/dashboard")
       }
     } catch (err: unknown) {
-      let message = "Login failed";
-      if (err instanceof Error) {
-        message = err.message;
-      }
+      const message = err instanceof Error ? err.message : "Login failed";
 
+      toast({
+        title: message,
+        description: "Please try again"
+      })
       setError("password", {
         type: "manual",
         message: message,
       })
-      console.error("Login failed", err)
     } finally {
-      setLoading(false)
+      // setLoading(false)
     }
   }
 
@@ -152,6 +157,7 @@ export default function LoginForm() {
 
   return (
     <>
+      {loading && <FullScreenLoader />}
       <Toaster />
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-sm w-full">
         <div className="relative">

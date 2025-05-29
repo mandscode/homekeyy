@@ -95,6 +95,7 @@ const PropertyList = () => {
         queryKey: ["properties"],
         queryFn: fetchProperties,
     });
+
   return (
     <Card className="rounded-lg border-none mt-6">
       <CardContent className="p-6">

@@ -13,7 +13,7 @@ interface UserModalProps {
 
 export function UserModal({ open, onOpenChange, userId }: UserModalProps) {
   const handleFormSubmit = (success: boolean) => {
-    if (success) {
+    if (!success) {
       onOpenChange(false);
     }
   };

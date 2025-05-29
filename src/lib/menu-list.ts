@@ -27,8 +27,8 @@ type Group = {
   menus: Menu[];
 };
 
-export function getMenuList(pathname: string): Group[] {
-  console.log(pathname)
+export function getMenuList(): Group[] {
+
   return [
     {
       groupLabel: "",

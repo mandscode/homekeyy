@@ -21,6 +21,8 @@ import ServiceSchedule from "@/components/forms/ServiceSchedule"
 import { useQuery } from "@tanstack/react-query"
 import Image from "next/image"
 
+import { useQueryClient } from '@tanstack/react-query';
+
 const formSchema = z.object({
   propertyName: z
     .string()
@@ -55,6 +57,12 @@ const formSchema = z.object({
   subMeters: z
     .number({ invalid_type_error: "Sub meters must be a number" }),
 
+  subMeterRatePerUnit: z
+    .number({ invalid_type_error: "Sub meter rate per unit must be a number" }),
+
+  fixedWaterBillAmount: z
+    .number({ invalid_type_error: "Fixed water bill amount must be a number" }),
+
   amenities: z
     .array(z.object({
       id: z.number(),
@@ -87,13 +95,12 @@ const formSchema = z.object({
 });
 
 type ServiceScheduleProps = {
-  serviceType: string;
+  service: {
+    type: string;
+  }
   startTime: string;
   endTime: string;
   dayOfWeek: string;
-  subService: {
-    name: string;
-  }
 }
 
 type FormField = {
@@ -143,6 +150,8 @@ type PropertyData = {
   images: PropertyImage[];
   serviceSchedule: ServiceSchedule[];
   flatDetails: FlatDetails[];
+  subMeterRatePerUnit: number;
+  fixedWaterBillAmount: number;
 };
 
 type Amenity = {
@@ -192,7 +201,8 @@ interface PropertyUpdateFormProps {
 }
 
 export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUpdateFormProps) {
-  const { toast } = useToast()
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const [images, setImages] = useState<File[]>([])
@@ -211,6 +221,8 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
       totalMotors: 0,
       mainMeters: 0,
       subMeters: 0,
+      subMeterRatePerUnit: 0,
+      fixedWaterBillAmount: 0,
       amenities: [],
       images: [],
       serviceSchedule: [],
@@ -258,6 +270,8 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
         address: data.address,
         city: data.city,
         zip: data.zipCode,
+        subMeterRatePerUnit: data.subMeterRatePerUnit,
+        fixedWaterBillAmount: data.fixedWaterBillAmount,
         latitude: data.latitude,
         longitude: data.longitude,
         amenities: data.amenities.filter(amenity => amenity.value !== 'false' && amenity.value !== null && amenity.value !== '0').map(amenity => ({
@@ -283,6 +297,7 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
         toast({
           title: "Property updated successfully"
         });
+        queryClient.invalidateQueries({ queryKey: ["property", propertyId] });
         onSuccess?.();
         router.push('/properties');
       }
@@ -361,6 +376,11 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
     { name: "longitude", label: "Longitude" },
   ]
 
+  const pricingFields: FormField[] = [
+    { name: "subMeterRatePerUnit", label: "Sub Meter Rate Per Unit" },
+    { name: "fixedWaterBillAmount", label: "Fixed Water Bill Amount" }
+  ]
+
   const fetchAmenities = async () => {
     const res = await api.get(`/web/property/amenity/${propertyId}`);
     const amenities = res.data.amenities;
@@ -388,7 +408,7 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
 
           // Map service schedules to the expected format
           const mappedServiceSchedules = property.serviceSchedules.map((ss: ServiceScheduleProps) => ({
-            serviceType: ss.subService.name,
+            serviceType: ss.service.type,
             day: ss.dayOfWeek,
             startTime: ss.startTime,
             endTime: ss.endTime
@@ -416,6 +436,8 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
             subMeters: 0, // Default value since it's not in the response
             amenities: mappedAmenities,
             images: mappedImages,
+            subMeterRatePerUnit: property.subMeterRatePerUnit,
+            fixedWaterBillAmount: property.fixedWaterBillAmount,
             serviceSchedule: mappedServiceSchedules,
             flatDetails: property.units.map((unit: Unit) => ({
               flatNo: unit.number,
@@ -425,7 +447,6 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
               status: unit.status.toLowerCase() as 'available' | 'notice' | 'occupied'
             }))
           });
-
           // Update the schedules state
           setSchedules(mappedServiceSchedules);
         }
@@ -453,6 +474,19 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
         <form onSubmit={form.handleSubmit(propertySubmit, onError)} className="space-y-8">
             <div className="grid grid-cols-3 gap-6">
               {formFields.map(({ name, label, type = "text" }) => (
+                <div key={name} className="flex flex-col gap-3">
+                  <Label htmlFor={name}>{label}</Label>
+                  <Input
+                    id={name}
+                    type={type}
+                    placeholder={label}
+                    {...form.register(name, { valueAsNumber: type === "number" })}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-3 gap-6">
+              {pricingFields.map(({ name, label, type = "text" }) => (
                 <div key={name} className="flex flex-col gap-3">
                   <Label htmlFor={name}>{label}</Label>
                   <Input

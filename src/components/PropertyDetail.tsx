@@ -58,6 +58,8 @@ type PropertyData = {
   totalMotors: number;
   mainMeters: number;
   subMeters: number;
+  subMeterRatePerUnit: number;
+  fixedWaterBillAmount: number;
   units: FlatDetails[];
 };
 
@@ -116,10 +118,11 @@ export default function PropertyDetail() {
       totalMotors: 0,
       mainMeters: 0,
       subMeters: 0,
+      subMeterRatePerUnit: 0,
+      fixedWaterBillAmount: 0,
       units: []
     };
   };
-
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({}); // <-- Single ref for all flats
 
   const { data: property = {
@@ -135,12 +138,13 @@ export default function PropertyDetail() {
     totalMotors: 0,
     mainMeters: 0,
     subMeters: 0,
+    subMeterRatePerUnit: 0,
+    fixedWaterBillAmount: 0,
     units: [],
   } } = useQuery<PropertyData>({
     queryKey: ["property", id],
     queryFn: fetchProperty,
   });
-  console.log(property, "property")
   
   const uniqueFloors = [...new Set(property.units.map(flat => flat.floor))];
   const filteredFlats = selectedFloor && property.units
@@ -167,7 +171,6 @@ export default function PropertyDetail() {
     setFlatImages(updated); // pass back 
   };
   
-
   return (
     <>
     <div className="p-6 space-y-12">
@@ -197,6 +200,16 @@ export default function PropertyDetail() {
         </div>
       </div>
   
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-gray-600">
+        <div>
+          <p className="font-medium text-black">Sub meter rate per unit</p>
+          <p>{property.subMeterRatePerUnit}</p>
+        </div>
+        <div>
+          <p className="font-medium text-black">Fixed water bill amount</p>
+          <p>{property.fixedWaterBillAmount}</p>
+        </div>
+      </div>
       <div>
         <h3 className="font-medium mb-2">Images</h3>
         <div className="flex gap-4 flex-wrap">

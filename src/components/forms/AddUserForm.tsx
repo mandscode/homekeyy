@@ -37,7 +37,7 @@ export const formSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email").nullable().optional().or(z.literal('')),
-  phone: z.string().min(10, "Phone is required"),
+  phone: z.string().min(10, "Phone is required minimum 10 digits"),
   password: z.string().min(6, "Password must be at least 6 characters").nullable().optional().or(z.literal('')),
   role: z.enum(["SERVICE_MANAGER", "PROPERTY_MANAGER", "OWNER"]),
   status: z.boolean(),
@@ -181,7 +181,7 @@ export default function AddUserForm({ setOpen, userId }: { setOpen: (open: boole
         password: '' // Set empty password for edit mode
       });
     }
-  }, [userData, form]);
+  }, [userData, form, userId]);
 
   const onSubmit = async (data: FormData) => {
     setLoading(true)
@@ -201,6 +201,7 @@ export default function AddUserForm({ setOpen, userId }: { setOpen: (open: boole
           title: data.id ? "User updated successfully" : "User created successfully"
         });
         setOpen(false);
+        form.reset();
       }
     } catch (err: unknown) {
       let message = data.id ? "Failed to update user" : "Failed to create user";
@@ -299,7 +300,7 @@ export default function AddUserForm({ setOpen, userId }: { setOpen: (open: boole
       setServicesHide(true)
     }
   }, [roleValue])
-
+  // console.log(form.getValues())
   return (
     <>
       {loading && <FullScreenLoader />}
@@ -333,10 +334,13 @@ export default function AddUserForm({ setOpen, userId }: { setOpen: (open: boole
                     <Select
                       value={form.watch(name) !== undefined ? String(form.watch(name)) : undefined}
                       onValueChange={(val) => {
+                        if (!val) return;
                         let finalValue: string | number | boolean = val;
+                        
                         if (name === "status") {
                           finalValue = val === "true";
                         }
+                        
                         form.setValue(name, finalValue);
                       }}
                     >

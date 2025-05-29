@@ -46,12 +46,21 @@ const formSchema = z.object({
     .string()
     .min(1, { message: "Longitude is required" }),
 
+  subMeterRatePerUnit: z
+    .number()
+    .min(0, { message: "Sub Meter Rate Per Unit must be greater than 0" }),
+
+  fixedWaterBillAmount: z
+    .number()
+    .min(0, { message: "Fixed Water Bill Amount must be greater than 0" }),
+
   amenities: z
     .array(z.object({
       id: z.number(),
       name: z.string(),
       type: z.enum(['number', 'boolean']),
       forProperty: z.boolean(),
+      value: z.string().optional(),
       createdAt: z.union([z.string(), z.date()]),
       updatedAt: z.union([z.string(), z.date()])
     }))
@@ -92,6 +101,12 @@ const formSchema = z.object({
 
 
 type FormField = {
+  name: keyof z.infer<typeof formSchema>
+  label: string
+  type?: "text" | "number"
+}
+
+type PricingField = {
   name: keyof z.infer<typeof formSchema>
   label: string
   type?: "text" | "number"
@@ -346,6 +361,11 @@ export default function PropertyForm() {
     { name: "latitude", label: "Latitude" },
     { name: "longitude", label: "Longitude" },
   ]
+  
+  const pricingFields: PricingField[] = [
+    { name: "subMeterRatePerUnit", label: "Sub Meter Rate Per Unit" },
+    { name: "fixedWaterBillAmount", label: "Fixed Water Bill Amount" }
+  ]
 
   const fetchAmenities = async () => {
     const res = await api.get("/web/property/amenity");
@@ -390,6 +410,24 @@ export default function PropertyForm() {
               <Label>Images</Label>
               <ImageUpload onChange={handleImagesChange}/>
             </div>
+            <div className="space-y-6">
+              <div className="flex flex-col gap-7">
+                <Label>Pricing</Label>
+                  <div className="grid grid-cols-3 gap-6">
+                    {pricingFields.map(({ name, label, type = "number" }) => (
+                      <div key={name} className="flex flex-col gap-3">
+                        <Label htmlFor={name}>{label}</Label>
+                        <Input
+                          id={name}
+                          type={type}
+                          placeholder={label}
+                          {...form.register(name, { valueAsNumber: type === "number" })}
+                        />
+                      </div>
+                    ))}
+                  </div>
+              </div>
+            </div>
 
             {/* Amenities Section */}
             <div className="space-y-6">
@@ -401,6 +439,7 @@ export default function PropertyForm() {
                     .filter((item: Amenity) => item.type === 'number')
                     .map((item: Amenity) => {
                       const fieldName = item.name.toLowerCase().replace(/\s+/g, '');
+                      // console.log(fieldName, form.getValues("amenities"))
                       return (
                         <div key={item.id} className="flex flex-col gap-3">
                           <Label htmlFor={fieldName}>{item.name}</Label>
@@ -409,16 +448,20 @@ export default function PropertyForm() {
                             type="number"
                             placeholder={item.name}
                             min={0}
+                            value={form.getValues("amenities").find((i: Amenity) => i.id === item.id)?.value || 0}
                             defaultValue={0}
                             onChange={(e) =>  {
-                              const updated = e.target.value
-                                ? [...form.getValues("amenities"), {
-                                    ...item,
-                                    forProperty: true,
-                                    createdAt: new Date().toISOString(),
-                                    updatedAt: new Date().toISOString(),
-                                    value: e.target.value
-                                  }]
+                              const value = e.target.value;
+                              const currentAmenities = form.getValues("amenities") || [];
+                              
+                              const updated = value
+                                ? (() => {
+                                  const existingAmenity = currentAmenities.find((i: Amenity) => i.id === item.id);
+                                  if (existingAmenity) {
+                                    return currentAmenities.map((i: Amenity) => i.id === item.id ? { ...i, value } : i);
+                                  }
+                                  return [...currentAmenities, { ...item, value }];
+                                })()
                                 : form.getValues("amenities").filter((i: Amenity) => i.id !== item.id);
 
                               form.setValue("amenities", updated);

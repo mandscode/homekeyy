@@ -17,8 +17,8 @@ export function UnitModal({ open, onOpenChange, unitId }: UnitModalProps) {
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" />
         <Dialog.Content
-            className="fixed left-1/2 top-1/2 z-50 w-[70%] max-h-[80vh] -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-8 px-8 shadow-lg focus:outline-none overflow-y-auto"
-            >
+          className="fixed left-1/2 top-1/2 z-50 w-[70%] max-h-[80vh] -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-8 px-8 shadow-lg focus:outline-none"
+        >
           <div className="flex justify-between items-center mb-4">
             <Dialog.Title className="text-lg font-semibold">
               {unitId ? "Edit Unit" : "Add New Unit"}
@@ -30,9 +30,8 @@ export function UnitModal({ open, onOpenChange, unitId }: UnitModalProps) {
             </Dialog.Close>
           </div>
 
-          {/* 👉 Replace this with your actual form or design */}
-          <div>
-            <UnitForm unitId={unitId} />
+          <div className="overflow-y-auto max-h-[calc(80vh-8rem)]">
+            <UnitForm unitId={unitId} onOpenChange={onOpenChange}/>
           </div>
         </Dialog.Content>
       </Dialog.Portal>

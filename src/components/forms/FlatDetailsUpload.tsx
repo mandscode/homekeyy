@@ -15,15 +15,14 @@ interface FlatDetails {
 type FlatStatus = 'available' | 'notice' | 'occupied';
 
 export default function FlatDetailsUpload({
-  flats,
-  setFlats,
+  setFlats
 }: {
-  flats: FlatDetails[]
+  flats?: FlatDetails[]
   setFlats: React.Dispatch<React.SetStateAction<FlatDetails[]>>
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploaded, setUploaded] = useState(false)
-  console.log(flats)
+
   const handleUploadClick = () => {
     fileInputRef.current?.click()
   }

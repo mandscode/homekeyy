@@ -10,6 +10,7 @@ type Amenity = {
   name: string;
   type: 'number' | 'boolean'; // Using union type for the enum values
   forProperty: boolean;
+  value: string;
   createdAt: string | Date; // Can be string (ISO format) or Date object
   updatedAt: string | Date;
 };
@@ -41,9 +42,11 @@ export type PropertyData = {
   zipCode: string;
   latitude: string;
   longitude: string;
-  totalMotors: number;
-  mainMeters: number;
-  subMeters: number;
+  totalMotors: string;
+  mainMeters: string;
+  subMeters: string;
+  subMeterRatePerUnit: number;
+  fixedWaterBillAmount: number;
   flatDetails: FlatDetails[];
 };
 
@@ -130,7 +133,13 @@ export default function PropertyInfo({data, onImagesChange}:{data:PropertyData, 
             Lat: {data.latitude}, Lng: {data.longitude}
           </p>
         </div>
-        <div>
+        {data.amenities.filter((amenity) => amenity.type === "number").map((amenity, index) => (
+          <div key={index}>
+            <p className="font-medium text-black">{amenity.name}</p>
+            <p>{amenity.value}</p>
+          </div>
+        ))}
+        {/* <div>
           <p className="font-medium text-black">Total motors</p>
           <p>{data.totalMotors}</p>
         </div>
@@ -141,6 +150,14 @@ export default function PropertyInfo({data, onImagesChange}:{data:PropertyData, 
         <div>
           <p className="font-medium text-black">Sub meters</p>
           <p>{data.subMeters}</p>
+        </div> */}
+        <div>
+          <p className="font-medium text-black">Sub meter rate per unit</p>
+          <p>{data.subMeterRatePerUnit}</p>
+        </div>
+        <div>
+          <p className="font-medium text-black">Fixed water bill amount</p>
+          <p>{data.fixedWaterBillAmount}</p>
         </div>
       </div>
   
@@ -164,7 +181,7 @@ export default function PropertyInfo({data, onImagesChange}:{data:PropertyData, 
       <div>
         <h3 className="font-medium mb-2">Amenities</h3>
         <div className="flex flex-wrap gap-2">
-          {data.amenities.map((amenity, index) => (
+          {data.amenities.filter((amenity) => amenity.type === "boolean").map((amenity, index) => (
             <Badge key={index} className="bg-red-100 text-red-600 text-base">
               {amenity.name}
             </Badge>
@@ -227,20 +244,20 @@ export default function PropertyInfo({data, onImagesChange}:{data:PropertyData, 
           </div>
         </div>
 
-        <div className="grid grid-cols-7 w-full gap-3 rounded-md text-sm text-gray-600 font-semibold">
+        <div className="grid grid-cols-6 w-full gap-3 rounded-md text-sm text-gray-600 font-semibold">
           <div className="bg-gray-100 p-2 text-center rounded-sm">Flat number</div>
           <div className="bg-gray-100 p-2 text-center rounded-sm">Image</div>
           <div className="bg-gray-100 p-2 text-center rounded-sm">Floor</div>
           <div className="bg-gray-100 p-2 text-center rounded-sm">Rooms</div>
           <div className="bg-gray-100 p-2 text-center rounded-sm">Baths</div>
           <div className="bg-gray-100 p-2 text-center rounded-sm">Status</div>
-          <div className="bg-gray-100 p-2 text-center rounded-sm"></div>
+          {/* <div className="bg-gray-100 p-2 text-center rounded-sm"></div> */}
         </div>
 
         {filteredFlats.map((flat, i) => 
         {
           return (
-            <div key={i} className="grid grid-cols-7 gap-3 items-center py-3 border-b text-center">
+            <div key={i} className="grid grid-cols-6 gap-3 items-center py-3 border-b text-center">
               <div>{flat.flatNo}</div>
               <div className="flex flex-col items-center gap-1">
                 <Button
@@ -272,9 +289,9 @@ export default function PropertyInfo({data, onImagesChange}:{data:PropertyData, 
               <span className="bg-green-100 px-2 py-1 rounded">
                 <FlatStatusBadge status={flat.status} />
               </span>
-              <Button variant="link" className="text-blue-600 px-0 text-sm">
+              {/* <Button variant="link" className="text-blue-600 px-0 text-sm">
                 Edit
-              </Button>
+              </Button> */}
             </div>
           )
         })}

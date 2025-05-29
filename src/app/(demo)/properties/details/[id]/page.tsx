@@ -12,32 +12,43 @@ import {
 import PropertyDetail from "@/components/PropertyDetail";
 import { Button } from "@/components/ui/button";
 import { useRouter, useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/axios";
 
 export default function NewPostPage() {
   const router = useRouter()
   const params = useParams()
+
+  const { data: property } = useQuery({
+    queryKey: ["property", params.id],
+    queryFn: async () => {
+      const res = await api.get(`/web/property/${params.id}`);
+      return res.data.property;
+    },
+    enabled: !!params.id
+  });
+
   return (
-    <ContentLayout title="New PropertY">
+    <ContentLayout title={property?.name || "Loading..."}>
       <Breadcrumb>
-      <div className="flex justify-between">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/properties">Properties</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Detail</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-        <Button onClick={() => router.push(`/properties/update/${params.id}`)}>
+        <div className="flex justify-between">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/properties">Properties</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Detail</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+          <Button onClick={() => router.push(`/properties/update/${params.id}`)}>
             Edit Property
           </Button>
-      </div>
+        </div>
       </Breadcrumb>
       <PropertyDetail/>
-      
     </ContentLayout>
   );
 }

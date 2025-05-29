@@ -17,15 +17,14 @@ import { Toaster } from "@/components/ui/toaster"
 import FullScreenLoader from "../utils/FullScreenLoader"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 import Image from "next/image"
+import QuantitySelector from "../utils/QuantitySelector"
 
 type Amenity = {
-  amenityId: number;
-  amenity: AmenityValue;
-  amenityValue: string | number;
-};
-type AmenityValue = {
+  id: number;
   name: string;
+  value: string;
 };
+
 const formSchema = z.object({
   number: z.string().min(1, "Unit number is required"),
   floor: z.string().min(1, "Floor is required"),
@@ -34,8 +33,8 @@ const formSchema = z.object({
   rooms: z.string().min(1, "Number of rooms is required"),
   bathrooms: z.string().min(1, "Number of bathrooms is required"),
   parkingNumber: z.string().min(1, "Parking number is required"),
-  gasConnection: z.boolean(),
-  powerBackup: z.boolean(),
+  gasConnection: z.boolean().optional(),
+  powerBackup: z.boolean().optional(),
   meterBox: z.string().optional(),
   initialMeterReading: z.string().optional(),
   status: z.enum(["AVAILABLE", "BOOKED", "OCCUPIED", "NOTICE_PERIOD"]),
@@ -44,11 +43,12 @@ const formSchema = z.object({
   rentalType: z.enum(['monthly', 'yearly']),
   effective_from: z.string().min(1, "Effective from date is required"),
   effective_to: z.string().min(1, "Effective to date is required"),
+  meterType: z.enum(['SUB', 'MAIN']),
   amenities: z.array(z.object({
     id: z.number(),
     name: z.string(),
     value: z.string()
-  })),
+  })).min(1, "At least one amenity is required"),
   images: z.array(z.object({
     url: z.string(),
     name: z.string(),
@@ -67,12 +67,6 @@ type FlatImage = {
 
 type UnitAmenity = {
   id: number;
-  amenity: UnitAmenityForm;
-  amenityValue: string | number;
-}
-
-type UnitAmenityForm = {
-  id: number;
   name: string;
   value: string;
 }
@@ -85,14 +79,15 @@ type UnitFormData = {
   rooms: string;
   bathrooms: string;
   parkingNumber: string;
-  gasConnection: boolean;
-  powerBackup: boolean;
+  gasConnection?: boolean;
+  powerBackup?: boolean;
   meterBox?: string;
   initialMeterReading?: string;
   status: "AVAILABLE" | "BOOKED" | "OCCUPIED" | "NOTICE_PERIOD";
   rent: string;
   sercurityDeposit: string;
   rentalType: 'monthly' | 'yearly';
+  meterType: 'SUB' | 'MAIN';
   effective_from: string;
   effective_to: string;
   amenities: Array<{
@@ -117,9 +112,10 @@ type FormField = {
 
 interface UnitFormProps {
   unitId?: number;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export default function UnitForm({ unitId }: UnitFormProps) {
+export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
   const [loading, setLoading] = useState(false)
   const [images, setImages] = useState<File[]>([])
   const { toast } = useToast()
@@ -132,6 +128,7 @@ export default function UnitForm({ unitId }: UnitFormProps) {
       gasConnection: false,
       powerBackup: false,
       status: "AVAILABLE",
+      meterType: 'SUB',
       rentalType: "monthly",
       effective_from: new Date().toISOString().split('T')[0],
       effective_to: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
@@ -148,12 +145,10 @@ export default function UnitForm({ unitId }: UnitFormProps) {
     },
     enabled: !!unitId
   });
-  console.log(unitData, "unitData")
-
   // Update form when unit data is loaded
   useEffect(() => {
-    console.log(unitData, "unitDataa")
     if (unitData) {
+
       const formData = {
         number: unitData.number || "",
         floor: unitData.floor || "",
@@ -164,6 +159,7 @@ export default function UnitForm({ unitId }: UnitFormProps) {
         parkingNumber: unitData.parkingNumber || "",
         gasConnection: unitData.gasConnection || false,
         powerBackup: unitData.powerBackup || false,
+        meterType: unitData.meterType || "",
         meterBox: unitData.meterBox || "",
         initialMeterReading: unitData.initialMeterReading || "",
         status: unitData.status || "AVAILABLE",
@@ -173,10 +169,10 @@ export default function UnitForm({ unitId }: UnitFormProps) {
         effective_from: unitData.unitRentalDetails?.[0]?.effective_from?.split('T')[0] || new Date().toISOString().split('T')[0],
         effective_to: unitData.unitRentalDetails?.[0]?.effective_to?.split('T')[0] || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
         amenities: unitData.unitAmenities?.map((amenity: Amenity) => ({
-          id: amenity.amenityId,
-          name: amenity.amenity.name,
-          value: amenity.amenityValue
-        })) || [],
+          id: amenity.id,
+          name: amenity.name,
+          value: amenity.value
+        })).filter((amenity: Amenity) => Number(amenity.value) > 0) || [],
         images: unitData.images?.map((img: FlatImage) => ({
           url: img.url,
           name: img.alt || "unit-image",
@@ -184,6 +180,7 @@ export default function UnitForm({ unitId }: UnitFormProps) {
           size: 0
         })) || []
       };
+
       form.reset(formData as UnitFormData);
     }
   }, [unitData, form]);
@@ -219,6 +216,7 @@ export default function UnitForm({ unitId }: UnitFormProps) {
         rooms: data.rooms,
         bathrooms: data.bathrooms,
         parkingNumber: data.parkingNumber,
+        meterType: data.meterType,
         gasConnection: data.gasConnection,
         powerBackup: data.powerBackup,
         meterBox: data.meterBox,
@@ -260,11 +258,18 @@ export default function UnitForm({ unitId }: UnitFormProps) {
       const response = unitId 
         ? await api.put(`/web/unit/${unitId}`, payload)
         : await api.post("/unit/register", payload);
-      
+
       if (response.status === 1) {
+
         toast({
-          title: unitId ? "Unit updated successfully" : "Unit created successfully"
+          title: unitId ? "Unit updated successfully" : "Unit created successfully",
+          variant: "default",
+          duration: 3000,
+          className: "z-[100]"
         });
+        if (onOpenChange) {
+          onOpenChange(false);
+        }
         if (!unitId) {
           form.reset();
         }
@@ -276,7 +281,9 @@ export default function UnitForm({ unitId }: UnitFormProps) {
       }
       toast({
         title: message,
-        variant: "destructive"
+        variant: "destructive",
+        duration: 3000,
+        className: "z-[100]"
       });
     } finally {
       setLoading(false)
@@ -339,6 +346,10 @@ export default function UnitForm({ unitId }: UnitFormProps) {
     { value: "monthly", label: "Monthly" },
     { value: "yearly", label: "Yearly" }
   ];
+  const meterTypeOptions = [
+    { value: "SUB", label: "Sub Meter" },
+    { value: "MAIN", label: "Main Meter" }
+  ];
 
   const formFields: FormField[] = [
     { name: "number", label: "Unit Number" },
@@ -365,18 +376,19 @@ export default function UnitForm({ unitId }: UnitFormProps) {
     { name: "sercurityDeposit", label: "Security Deposit", type: "text" },
     { name: "rentalType", label: "Rental Type", type: "select", options: rentalTypeOptions },
     { name: "effective_from", label: "Effective From", type: "text" },
-    { name: "effective_to", label: "Effective To", type: "text" }
+    { name: "effective_to", label: "Effective To", type: "text" },
+    { name: "meterType", label: "Meter Type", type: "select", options: meterTypeOptions }
   ];
 
   if (isLoadingUnit) {
     return <FullScreenLoader />;
   }
-  
+
   return (
     <>
       {loading && <FullScreenLoader />}
       <Toaster />
-      <div className="h-[calc(100vh-4rem)] overflow-y-auto">
+      <div className="h-[calc(100vh-4rem)]">
         <Card className="rounded-lg border-none">
           <CardContent className="p-6">
             <form onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-8">
@@ -413,48 +425,78 @@ export default function UnitForm({ unitId }: UnitFormProps) {
               </div>
 
               <div className="flex flex-col gap-3">
-                <Label>Features</Label>
-                <div className="flex gap-6">
-                  <label className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={form.watch("gasConnection")}
-                      onCheckedChange={(checked) => form.setValue("gasConnection", checked as boolean)}
-                    />
-                    <span>Gas Connection</span>
-                  </label>
-                  <label className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={form.watch("powerBackup")}
-                      onCheckedChange={(checked) => form.setValue("powerBackup", checked as boolean)}
-                    />
-                    <span>Power Backup</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3">
                 <Label>Amenities</Label>
                 <div className="grid grid-cols-3 gap-4">
-                  {unitData?.unitAmenities?.map((item:  UnitAmenity) => {
-                    const selectedAmenities = form.watch("amenities") || [];
-                    const isSelected = selectedAmenities.some((a) => a.id === item.amenity.id);
-
+                {/* {unitData?.unitAmenities?.map((item:  UnitAmenity) => {
+                    const currentAmenities = form.watch("amenities") || [];
+                    const isChecked = currentAmenities.some(a => a.id === item.id);
                     return (
-                      <label key={item.amenity.id} className="flex items-center space-x-2">
+                      <label key={item.id} className="flex items-center space-x-2">
                         <Checkbox
-                          checked={isSelected}
+                          checked={isChecked}
                           onCheckedChange={(checked) => {
                             const updated = checked
-                              ? [...selectedAmenities, { id: item.amenity.id, name: item.amenity.name, value: "true" }]
-                              : selectedAmenities.filter((a) => a.id !== item.amenity.id);
-
+                              ? [...currentAmenities, { id: item.id, name: item.name, value: "true" }]
+                              : currentAmenities.filter((a: Amenity) => a.id !== item.id);
                             form.setValue("amenities", updated);
                           }}
                         />
-                        <span>{item.amenity.name}</span>
+                        <span>{item.name}</span>
+                      </label>
+                    );
+                  })} */}
+                  {unitData?.unitAmenities?.map((item:  UnitAmenity) => {
+                    const currentAmenities = form.watch("amenities") || [];
+                    const currentAmenity = currentAmenities.find((a: Amenity) => a.id === item.id);
+                    const quantity = currentAmenity ? parseInt(currentAmenity.value) || 0 : 0;
+                    
+                    return (
+                      <label key={item.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          checked={quantity > 0}
+                          onCheckedChange={(checked) => {
+                            const updated = checked
+                              ? [...currentAmenities.filter((a: Amenity) => a.id !== item.id), 
+                                 { id: item.id, name: item.name, value: "1" }]
+                              : currentAmenities.filter((a: Amenity) => a.id !== item.id);
+                            form.setValue("amenities", updated);
+                          }}
+                        />
+                        <span>{item.name}</span>
+                        {
+                          quantity > 0 && (
+                            <>
+                            <QuantitySelector 
+                              value={quantity}
+                          onChange={(newValue) => {
+                            const updated = newValue > 0
+                              ? [...currentAmenities.filter((a: Amenity) => a.id !== item.id),
+                                 { id: item.id, name: item.name, value: newValue.toString() }]
+                              : currentAmenities.filter((a: Amenity) => a.id !== item.id);
+                            form.setValue("amenities", updated);
+                                }}
+                                quantity={quantity}
+                              />
+                            </>
+                          )
+                        }
                       </label>
                     );
                   })}
+                    <label className="flex items-center space-x-2">
+                      <Checkbox
+                        checked={form.watch("gasConnection")}
+                        onCheckedChange={(checked) => form.setValue("gasConnection", checked as boolean)}
+                      />
+                      <span>Gas Connection</span>
+                    </label>
+                    <label className="flex items-center space-x-2">
+                      <Checkbox
+                        checked={form.watch("powerBackup")}
+                        onCheckedChange={(checked) => form.setValue("powerBackup", checked as boolean)}
+                      />
+                      <span>Power Backup</span>
+                    </label>
                 </div>
               </div>
               <div className="flex flex-wrap gap-4">
