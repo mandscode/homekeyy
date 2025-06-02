@@ -35,7 +35,7 @@ type User = {
   name: string;
   email: string | null;
   phone: string;
-  role: "SERVICE_MANAGER" | "PROPERTY_MANAGER" | "OWNER";
+  role: "SERVICE_MANAGER" | "PROPERTY_MANAGER" | "OWNER" | "ADMIN";
   status: boolean;
   createdAt: string;
   updatedAt: string;
@@ -46,7 +46,7 @@ type User = {
 type UserTable = {
   name:string;
   phone: string;
-  role: "SERVICE_MANAGER" | "PROPERTY_MANAGER" | "OWNER";
+  role: "SERVICE_MANAGER" | "PROPERTY_MANAGER" | "OWNER" | "ADMIN";
   status: string;
   properties:number;
 }
@@ -56,7 +56,8 @@ const tabs = [
   { label: 'All', value: 'ALL' },
   { value: 'PROPERTY_MANAGER', label: 'Property Manager' },
   { value: 'OWNER', label: 'Owner' },
-  { value: 'SERVICE_MANAGER', label: 'Service Provider' }
+  { value: 'SERVICE_MANAGER', label: 'Service Provider' },
+  { value: 'ADMIN', label: 'Admin' }
 ]
 
 const PER_PAGE = 6
@@ -96,7 +97,8 @@ export default function UserListTable() {
     if(users.length > 0) {
       const apiData = users?.filter((u:User) => u.role === "PROPERTY_MANAGER" || 
       u.role === "OWNER" || 
-      u.role === "SERVICE_MANAGER" ).map((user:User) => ({
+      u.role === "SERVICE_MANAGER" ||
+      u.role === "ADMIN" ).map((user:User) => ({
         name:user.name,
         phone:user.phone,
         role:user.role,
@@ -140,7 +142,7 @@ export default function UserListTable() {
             {/* Search */}
             <div className="mb-4">
                 <Input
-                placeholder="Search property manager"
+                placeholder="Search Users"
                 className="w-64"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -173,7 +175,7 @@ export default function UserListTable() {
                 <tr key={index} className="border-b hover:bg-gray-50">
                   <td className="p-4">{row.name}</td>
                   <td className="p-4">{row.phone}</td>
-                  <td className="p-4">{row.role}</td>
+                  <td className="p-4">{row.role === "PROPERTY_MANAGER" ? "Property Manager" : row.role === "OWNER" ? "Owner" : "Service Provider"}</td>
                   <td className="p-4">{row.properties}</td>
                   <td className="p-4 text-green-600">{row.status}</td>
                   <td className="p-4">

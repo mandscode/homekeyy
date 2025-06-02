@@ -2,10 +2,10 @@
 
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { loginSchema, LoginFormValues, recoverPasswordSchema, recoverPasswordValues } from "@/lib/validation"
+import { loginSchema, LoginFormValues } from "@/lib/validation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Loader2, Lock, Mail, Phone } from "lucide-react"
+import { Loader2, Lock, Phone } from "lucide-react"
 import { useEffect, useState } from "react"
 import api from "@/lib/axios"
 import { useRouter } from "next/navigation" // 👈 import router
@@ -25,6 +25,10 @@ export default function LoginForm() {
   const [isForgotPassDialog, setForgotPassDialog] = useState(false)
   const [newPassword, setNewPassword] = useState("")
   const [userId, setUserId] = useState<string | null>(null)
+  const [otpStep, setOtpStep] = useState<'phone' | 'otp' | 'password'>('phone')
+  const [otpToken, setOtpToken] = useState<string | null>(null)
+  const [phoneNumber, setPhoneNumber] = useState("")
+  const [otp, setOtp] = useState("")
 
   const router = useRouter() // 👈 initialize router
   
@@ -36,15 +40,6 @@ export default function LoginForm() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   })
-
-  const {
-    register:registerRecover,
-    handleSubmit:handleRecoverSubmit,
-    setError:setRecoverError,
-    formState: { errors:recoverErrors },
-  } = useForm({
-    resolver: zodResolver(recoverPasswordSchema),
-  });
 
   useEffect(() => {
     const token = Cookies.get('token')
@@ -92,37 +87,6 @@ export default function LoginForm() {
       // setLoading(false)
     }
   }
-
-  const onRecoverSubmit = async (data: recoverPasswordValues) => {
-    setLoading(true)
-    try {
-      const payload = {...data};
-      if (!payload.email) {
-        delete payload.email;
-      }
-      
-      const response = await api.post(apiEndpoints.Auth.endpoints.recoverPassword.path, payload)
-      if(response.status == 1) {
-        setForgotPassDialog(false)
-        toast({
-          title: response.data.message
-        });
-      }
-    } catch (err: unknown) {
-      let message = "Login failed";
-      if (err instanceof Error) {
-        message = err.message;
-      }
-
-      setRecoverError("password", {
-        type: "manual",
-        message: message,
-      })
-      console.error("Login failed", err)
-    } finally {
-      setLoading(false)
-    }
-  }
   
   const handleChangePassword = async () => {
     setLoading(true)
@@ -151,6 +115,90 @@ export default function LoginForm() {
       router.push("/dashboard")
     } catch (error) {
       console.error("Password change failed", error)
+      setLoading(false)
+    }
+  }
+
+  const handleSendOtp = async () => {
+    setLoading(true)
+    try {
+      const response = await api.post('/app/auth/send-otp', {
+        phone: phoneNumber
+      })
+      if (response.status == 1) {
+        setOtpStep('otp')
+        toast({
+          title: "OTP Sent",
+          description: "Please check your phone for the OTP"
+        })
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to send OTP"
+      toast({
+        title: "Error",
+        description: message
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleVerifyOtp = async () => {
+    setLoading(true)
+    try {
+      const response = await api.post('/app/auth/verify-otp', {
+        phone: phoneNumber,
+        otp: otp
+      })
+      if (response.data?.token) {
+        setOtpToken(response.data.token)
+        setOtpStep('password')
+        toast({
+          title: "OTP Verified",
+          description: "Please set your new password"
+        })
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to verify OTP"
+      toast({
+        title: "Error",
+        description: message
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResetPassword = async () => {
+    setLoading(true)
+    try {
+      const response = await api.post('/app/auth/reset-password', 
+        { newPassword },
+        {
+          headers: {
+            Authorization: `Bearer ${otpToken}`
+          }
+        }
+      )
+      if (response.status == 1) {
+        setForgotPassDialog(false)
+        setOtpStep('phone')
+        setPhoneNumber("")
+        setOtp("")
+        setNewPassword("")
+        setOtpToken(null)
+        toast({
+          title: "Success",
+          description: "Password has been reset successfully"
+        })
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to reset password"
+      toast({
+        title: "Error",
+        description: message
+      })
+    } finally {
       setLoading(false)
     }
   }
@@ -205,60 +253,103 @@ export default function LoginForm() {
           </Button>
         </DialogContent>
       </Dialog>
-      <Dialog open={isForgotPassDialog} onOpenChange={setForgotPassDialog}>
+      <Dialog open={isForgotPassDialog} onOpenChange={(open) => {
+        setForgotPassDialog(open)
+        if (!open) {
+          setOtpStep('phone')
+          setPhoneNumber("")
+          setOtp("")
+          setNewPassword("")
+          setOtpToken(null)
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Recover Password</DialogTitle>
+            <DialogTitle>Reset Password</DialogTitle>
           </DialogHeader>
 
-          {/* The form wrapper */}
-          <form onSubmit={handleRecoverSubmit((data) => {
-            onRecoverSubmit(data);
-          })} className="space-y-4 w-full">
-            {/* Phone */}
-            <div className="relative">
+          {otpStep === 'phone' && (
+            <div className="space-y-4">
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input className="pl-9" {...registerRecover("phone")} placeholder="Phone" />
+                <Input 
+                  className="pl-9" 
+                  placeholder="Enter your phone number"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                />
               </div>
-              {recoverErrors.phone && <p className="text-sm text-red-500">{recoverErrors.phone.message}</p>}
+              <Button 
+                onClick={handleSendOtp} 
+                className="w-full"
+                disabled={!phoneNumber || loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending OTP...
+                  </>
+                ) : (
+                  "Send OTP"
+                )}
+              </Button>
             </div>
+          )}
 
-            {/* Email */}
-            <div className="relative mt-2">
+          {otpStep === 'otp' && (
+            <div className="space-y-4">
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input {...registerRecover("email")} placeholder="Email (optional)" className="pl-9" />
+                <Input 
+                  placeholder="Enter OTP"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                />
               </div>
+              <Button 
+                onClick={handleVerifyOtp} 
+                className="w-full"
+                disabled={!otp || loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  "Verify OTP"
+                )}
+              </Button>
             </div>
+          )}
 
-            {/* Name */}
-            <div className="relative mt-2">
-              <Input {...registerRecover("name")} placeholder="Full Name" />
-              {recoverErrors.name && <p className="text-sm text-red-500">{recoverErrors.name.message}</p>}
-            </div>
-
-            {/* New Password */}
-            <div className="relative mt-2">
+          {otpStep === 'password' && (
+            <div className="space-y-4">
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
+                <Input 
                   className="pl-9"
                   type="password"
-                  {...registerRecover("password")}
-                  placeholder="New Password"
-                  />
+                  placeholder="Enter new password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
               </div>
-              {recoverErrors.password && (
-                <p className="text-sm text-red-500">{recoverErrors.password.message}</p>
-              )}
+              <Button 
+                onClick={handleResetPassword} 
+                className="w-full"
+                disabled={!newPassword || loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Resetting...
+                  </>
+                ) : (
+                  "Reset Password"
+                )}
+              </Button>
             </div>
-
-            {/* Submit */}
-            <Button type="submit" className="mt-4 w-full">
-              Submit
-            </Button>
-          </form>
+          )}
         </DialogContent>
       </Dialog>
 

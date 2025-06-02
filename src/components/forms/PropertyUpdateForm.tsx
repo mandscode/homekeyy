@@ -58,10 +58,12 @@ const formSchema = z.object({
     .number({ invalid_type_error: "Sub meters must be a number" }),
 
   subMeterRatePerUnit: z
-    .number({ invalid_type_error: "Sub meter rate per unit must be a number" }),
+    .number({ invalid_type_error: "Please enter a valid number for Sub Meter Rate Per Unit" })
+    .min(0, { message: "Sub Meter Rate Per Unit cannot be negative" }),
 
   fixedWaterBillAmount: z
-    .number({ invalid_type_error: "Fixed water bill amount must be a number" }),
+    .number({ invalid_type_error: "Please enter a valid number for Fixed Water Bill Amount" })
+    .min(0, { message: "Fixed Water Bill Amount cannot be negative" }),
 
   amenities: z
     .array(z.object({
@@ -230,25 +232,34 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
     }
   })
   
-  const onError = (errors:FieldErrors<PropertyData>) => {
-    let message = "Validation error";
-    if (errors instanceof Error) {
-      message = errors.message;
-    }
-    const firstErrorKey = Object.keys(errors)[0] as keyof PropertyData;
-    const error = errors[firstErrorKey];
+  const onError = (errors: FieldErrors<PropertyData>) => {
+    // Get all error messages
+    const errorMessages = Object.entries(errors).map(([field, error]) => {
+      if (error?.message) {
+        // Convert field name to a more readable format
+        const readableField = field
+          .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+          .replace(/^./, str => str.toUpperCase()); // Capitalize first letter
+        
+        return `${readableField}: ${error.message}`;
+      }
+      return null;
+    }).filter(Boolean);
 
-    if (Array.isArray(error) && error.length > 0) {
-      const nestedError = error[0]; // first item in the array
-      const nestedFieldKey = Object.keys(nestedError)[0];
-      message = nestedError[nestedFieldKey]?.message || message;
-    } else if (error?.message) {
-      message = error.message;
+    // Show the first error message
+    if (errorMessages.length > 0) {
+      toast({
+        title: "Validation Error",
+        description: errorMessages[0],
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Validation Error",
+        description: "Please check your input and try again",
+        variant: "destructive"
+      });
     }
-
-    toast({
-      title: message
-    });
   }
   
   const propertySubmit = async (data: PropertyData) => { 
@@ -317,7 +328,6 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
   }
 
   const uploadImagesToS3 = async (images: UploadImage[], entityName: string, entityId: string | number): Promise<UploadedImage[]> => {
-    console.log(images)
     const uploaded = await Promise.all(
       images.map(async (img) => {
         const formData = new FormData();
@@ -492,8 +502,12 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
                   <Input
                     id={name}
                     type={type}
+                    min={0}
                     placeholder={label}
-                    {...form.register(name, { valueAsNumber: type === "number" })}
+                    {...form.register(name, { 
+                      valueAsNumber: type === "number",
+                      min: 0
+                    })}
                   />
                 </div>
               ))}

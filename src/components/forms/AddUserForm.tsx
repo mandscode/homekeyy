@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 
 
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import api from "@/lib/axios"
 import { useEffect, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
@@ -35,11 +35,17 @@ export const serviceSchema = z.object({
 })
 export const formSchema = z.object({
   id: z.number().optional(),
-  name: z.string().min(1, "Name is required"),
+  name: z.string()
+    .min(1, "Name is required")
+    .regex(/^[a-zA-Z0-9\s]+$/, "Name can only contain letters, numbers, and spaces")
+    .max(50, "Name cannot exceed 50 characters"),
   email: z.string().email("Invalid email").nullable().optional().or(z.literal('')),
-  phone: z.string().min(10, "Phone is required minimum 10 digits"),
+  phone: z.string()
+    .min(10, "Phone number must be at least 10 digits")
+    .max(15, "Phone number cannot exceed 15 digits")
+    .regex(/^[0-9]+$/, "Phone number must contain only digits"),
   password: z.string().min(6, "Password must be at least 6 characters").nullable().optional().or(z.literal('')),
-  role: z.enum(["SERVICE_MANAGER", "PROPERTY_MANAGER", "OWNER"]),
+  role: z.enum(["SERVICE_MANAGER", "PROPERTY_MANAGER", "OWNER", "ADMIN"]),
   status: z.boolean(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
@@ -135,7 +141,8 @@ type Service = {
 type Role =
   "SERVICE_MANAGER" | 
   'PROPERTY_MANAGER' |
-  'OWNER'
+  'OWNER' |
+  'ADMIN'
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -144,6 +151,7 @@ export default function AddUserForm({ setOpen, userId }: { setOpen: (open: boole
   const { toast } = useToast()
   const [isServicesHide, setServicesHide] = useState(false)
   const [propertyModalOpen, setPropertyModalOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -197,6 +205,10 @@ export default function AddUserForm({ setOpen, userId }: { setOpen: (open: boole
         : await api.post("/web/user", payload);
       
       if (response.status === 1) {
+        // Invalidate and refetch relevant queries
+        await queryClient.invalidateQueries({ queryKey: ["user", userId] });
+        await queryClient.invalidateQueries({ queryKey: ["users"] });
+        
         toast({
           title: data.id ? "User updated successfully" : "User created successfully"
         });
@@ -217,29 +229,36 @@ export default function AddUserForm({ setOpen, userId }: { setOpen: (open: boole
     }
   }
   
-  const onError = (errors:FieldErrors<User>) => {
-    let message = "Validation error";
-    console.log(errors, "errors")
-    if (errors instanceof Error) {
-      message = errors.message;
-    }
-    const firstErrorKey = Object.keys(errors)[0] as keyof User;
-    const error = errors[firstErrorKey];
+  const onError = (errors: FieldErrors<User>) => {
+    // Get all error messages
+    const errorMessages = Object.entries(errors).map(([field, error]) => {
+      if (error?.message) {
+        // Convert field name to a more readable format
+        const readableField = field
+          .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+          .replace(/^./, str => str.toUpperCase()); // Capitalize first letter
+        
+        return `${readableField}: ${error.message}`;
+      }
+      return null;
+    }).filter(Boolean);
 
-    if (Array.isArray(error) && error.length > 0) {
-      const nestedError = error[0]; // first item in the array
-      const nestedFieldKey = Object.keys(nestedError)[0];
-      message = nestedError[nestedFieldKey]?.message || message;
-    } else if (error?.message) {
-      message = error.message;
+    // Show the first error message
+    if (errorMessages.length > 0) {
+      toast({
+        title: "Validation Error",
+        description: errorMessages[0],
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Validation Error",
+        description: "Please check your input and try again",
+        variant: "destructive"
+      });
     }
-
-    toast({
-      title: message
-    });
   }
   
-
   const formFields: FormField[] = [
     { name: "name", label: "Full Name" },
     { name: "role", label: "Assign Role" },
@@ -282,7 +301,8 @@ export default function AddUserForm({ setOpen, userId }: { setOpen: (open: boole
     role: [
       { label: "SERVICE_MANAGER", value: "SERVICE_MANAGER" },
       { label: "PROPERTY_MANAGER", value: "PROPERTY_MANAGER" },
-      { label: "OWNER", value: "OWNER" }
+      { label: "OWNER", value: "OWNER" },
+      { label: "ADMIN", value: "ADMIN" }
     ],
     status: [
       { label: "Active", value: 'true' },
@@ -300,7 +320,6 @@ export default function AddUserForm({ setOpen, userId }: { setOpen: (open: boole
       setServicesHide(true)
     }
   }, [roleValue])
-  // console.log(form.getValues())
   return (
     <>
       {loading && <FullScreenLoader />}
@@ -362,7 +381,15 @@ export default function AddUserForm({ setOpen, userId }: { setOpen: (open: boole
                     type={type}
                     placeholder={label}
                     {...form.register(name, {
-                      valueAsNumber: type === "number"
+                      valueAsNumber: type === "number",
+                      onChange: (e) => {
+                        if (name === "phone") {
+                          // Remove any non-numeric characters
+                          const value = e.target.value.replace(/[^0-9]/g, '');
+                          e.target.value = value;
+                          form.setValue(name, value);
+                        }
+                      }
                     })}
                   />
                 )}

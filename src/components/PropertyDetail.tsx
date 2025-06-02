@@ -6,7 +6,7 @@ import { Clock } from 'lucide-react';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/axios';
 import { useParams } from 'next/navigation';
@@ -95,7 +95,7 @@ const FlatStatusBadge = ({ status }: { status: string }) => {
 };
 
 export default function PropertyDetail() {
-  const [flatImages, setFlatImages] = useState<Record<string, File[]>>({});
+  // const [flatImages, setFlatImages] = useState<Record<string, File[]>>({});
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
   const [open, setOpen] = useState(false)
   const [unitId, setUnitId] = useState<number>()
@@ -123,7 +123,7 @@ export default function PropertyDetail() {
       units: []
     };
   };
-  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({}); // <-- Single ref for all flats
+  // const inputRefs = useRef<Record<string, HTMLInputElement | null>>({}); // <-- Single ref for all flats
 
   const { data: property = {
     propertyAmenities: [],
@@ -160,16 +160,16 @@ export default function PropertyDetail() {
     { available: 0, notice: 0, occupied: 0 }
   );
 
-  const handleImageChange = (number: string, files: FileList | null) => {
-    if (!files) return;
+  // const handleImageChange = (number: string, files: FileList | null) => {
+  //   if (!files) return;
   
-    const updated = {
-      ...flatImages,
-      [number]: [...(flatImages[number] || []), ...Array.from(files)],
-    };
+  //   const updated = {
+  //     ...flatImages,
+  //     [number]: [...(flatImages[number] || []), ...Array.from(files)],
+  //   };
   
-    setFlatImages(updated); // pass back 
-  };
+  //   setFlatImages(updated); // pass back 
+  // };
   
   return (
     <>
@@ -303,9 +303,9 @@ export default function PropertyDetail() {
           </div>
         </div>
 
-        <div className="grid grid-cols-7 w-full gap-3 rounded-md text-sm text-gray-600 font-semibold">
+        <div className="grid grid-cols-6 w-full gap-3 rounded-md text-sm text-gray-600 font-semibold">
           <div className="bg-gray-100 p-2 text-center rounded-sm">Flat number</div>
-          <div className="bg-gray-100 p-2 text-center rounded-sm">Image</div>
+          {/* <div className="bg-gray-100 p-2 text-center rounded-sm">Image</div> */}
           <div className="bg-gray-100 p-2 text-center rounded-sm">Floor</div>
           <div className="bg-gray-100 p-2 text-center rounded-sm">Rooms</div>
           <div className="bg-gray-100 p-2 text-center rounded-sm">Bathrooms</div>
@@ -316,9 +316,9 @@ export default function PropertyDetail() {
         {filteredFlats.map((flat, i) => 
         {
           return (
-            <div key={i} className="grid grid-cols-7 gap-3 items-center py-3 border-b text-center">
+            <div key={i} className="grid grid-cols-6 gap-3 items-center py-3 border-b text-center">
               <div>{flat.number}</div>
-              <div className="flex flex-col items-center gap-1">
+              {/* <div className="flex flex-col items-center gap-1">
                 <Button
                   variant="outline"
                   className="text-red-600 text-sm"
@@ -342,7 +342,7 @@ export default function PropertyDetail() {
                 <span className="text-xs text-gray-500">
                 {(flatImages[flat.number]?.length || 0) + (flat.images?.length || 0)} uploaded
                 </span>
-              </div>
+              </div> */}
               <div>{flat.floor}</div>
               <div>{flat.rooms}</div>
               <div>{flat.bathrooms}</div>

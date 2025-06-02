@@ -47,8 +47,8 @@ const formSchema = z.object({
     .min(1, { message: "Longitude is required" }),
 
   subMeterRatePerUnit: z
-    .number()
-    .min(0, { message: "Sub Meter Rate Per Unit must be greater than 0" }),
+    .number({ invalid_type_error: "Please enter a valid number for Sub Meter Rate Per Unit" })
+    .min(0, { message: "Sub Meter Rate Per Unit cannot be negative" }),
 
   fixedWaterBillAmount: z
     .number()
@@ -357,14 +357,14 @@ export default function PropertyForm() {
     { name: "propertyName", label: "Property Name" },
     { name: "address", label: "Address" },
     { name: "city", label: "City" },
-    { name: "zipCode", label: "ZIP Code" },
+    { name: "zipCode", label: "ZIP Code", type: "text" },
     { name: "latitude", label: "Latitude" },
     { name: "longitude", label: "Longitude" },
   ]
   
   const pricingFields: PricingField[] = [
-    { name: "subMeterRatePerUnit", label: "Sub Meter Rate Per Unit" },
-    { name: "fixedWaterBillAmount", label: "Fixed Water Bill Amount" }
+    { name: "subMeterRatePerUnit", label: "Sub Meter Rate Per Unit", type: "number" },
+    { name: "fixedWaterBillAmount", label: "Fixed Water Bill Amount", type: "number" }
   ]
 
   const fetchAmenities = async () => {
@@ -399,7 +399,17 @@ export default function PropertyForm() {
                     id={name}
                     type={type}
                     placeholder={label}
-                    {...form.register(name, { valueAsNumber: type === "number" })}
+                    {...form.register(name, { 
+                      valueAsNumber: type === "number",
+                      onChange: (e) => {
+                        if (name === "zipCode") {
+                          // Remove any non-numeric characters
+                          const value = e.target.value.replace(/[^0-9]/g, '');
+                          e.target.value = value;
+                          form.setValue(name, value);
+                        }
+                      }
+                    })}
                   />
                 </div>
               ))}
@@ -414,14 +424,18 @@ export default function PropertyForm() {
               <div className="flex flex-col gap-7">
                 <Label>Pricing</Label>
                   <div className="grid grid-cols-3 gap-6">
-                    {pricingFields.map(({ name, label, type = "number" }) => (
+                    {pricingFields.map(({ name, label, type = "text" }) => (
                       <div key={name} className="flex flex-col gap-3">
                         <Label htmlFor={name}>{label}</Label>
                         <Input
                           id={name}
                           type={type}
+                          min={0}
                           placeholder={label}
-                          {...form.register(name, { valueAsNumber: type === "number" })}
+                          {...form.register(name, { 
+                            valueAsNumber: type === "number",
+                            min: 0
+                          })}
                         />
                       </div>
                     ))}
@@ -439,7 +453,6 @@ export default function PropertyForm() {
                     .filter((item: Amenity) => item.type === 'number')
                     .map((item: Amenity) => {
                       const fieldName = item.name.toLowerCase().replace(/\s+/g, '');
-                      // console.log(fieldName, form.getValues("amenities"))
                       return (
                         <div key={item.id} className="flex flex-col gap-3">
                           <Label htmlFor={fieldName}>{item.name}</Label>
@@ -448,8 +461,7 @@ export default function PropertyForm() {
                             type="number"
                             placeholder={item.name}
                             min={0}
-                            value={form.getValues("amenities").find((i: Amenity) => i.id === item.id)?.value || 0}
-                            defaultValue={0}
+                            value={form.getValues("amenities").find((i: Amenity) => i.id === item.id)?.value || ""}
                             onChange={(e) =>  {
                               const value = e.target.value;
                               const currentAmenities = form.getValues("amenities") || [];
