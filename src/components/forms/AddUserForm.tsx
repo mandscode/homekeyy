@@ -44,7 +44,21 @@ export const formSchema = z.object({
     .min(10, "Phone number must be at least 10 digits")
     .max(15, "Phone number cannot exceed 15 digits")
     .regex(/^[0-9]+$/, "Phone number must contain only digits"),
-  password: z.string().min(6, "Password must be at least 6 characters").nullable().optional().or(z.literal('')),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character")
+    .refine((val) => {
+      // Check for repeated words (3 or more characters)
+      const words = val.match(/\b\w{3,}\b/g) || [];
+      const uniqueWords = new Set(words);
+      return words.length === uniqueWords.size;
+    }, "Password cannot contain repeated words")
+    .nullable()
+    .optional()
+    .or(z.literal('')),
   role: z.enum(["SERVICE_MANAGER", "PROPERTY_MANAGER", "OWNER", "ADMIN"]),
   status: z.boolean(),
   createdAt: z.string().optional(),
@@ -64,13 +78,53 @@ export const formSchema = z.object({
     });
   }
 
-  // Password length validation when provided
-  if (data.password && data.password !== '' && data.password.length < 6) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["password"],
-      message: "Password must be at least 6 characters"
-    });
+  // Password validation when provided
+  if (data.password && data.password !== '') {
+    if (data.password.length < 8) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["password"],
+        message: "Password must be at least 8 characters long"
+      });
+    }
+    if (!/[A-Z]/.test(data.password)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["password"],
+        message: "Password must contain at least one uppercase letter"
+      });
+    }
+    if (!/[a-z]/.test(data.password)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["password"],
+        message: "Password must contain at least one lowercase letter"
+      });
+    }
+    if (!/[0-9]/.test(data.password)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["password"],
+        message: "Password must contain at least one number"
+      });
+    }
+    if (!/[^A-Za-z0-9]/.test(data.password)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["password"],
+        message: "Password must contain at least one special character"
+      });
+    }
+    // Check for repeated words
+    const words = data.password.match(/\b\w{3,}\b/g) || [];
+    const uniqueWords = new Set(words);
+    if (words.length !== uniqueWords.size) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["password"],
+        message: "Password cannot contain repeated words"
+      });
+    }
   }
 
   // Email validation when provided
