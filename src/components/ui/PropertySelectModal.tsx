@@ -2,7 +2,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type Option = { value: number; label: string };
 
@@ -16,6 +16,11 @@ interface PropertyModalProps {
 
 export function PropertyModal({ open, onOpenChange, selected, onDone, options }: PropertyModalProps) {
   const [tempSelected, setTempSelected] = useState<number[]>(selected || []);
+
+  // Update tempSelected when selected prop changes
+  useEffect(() => {
+    setTempSelected(selected || []);
+  }, [selected]);
 
   const toggle = (value: number) => {
     setTempSelected((prev) =>

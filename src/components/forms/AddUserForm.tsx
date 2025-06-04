@@ -36,9 +36,9 @@ export const serviceSchema = z.object({
 export const formSchema = z.object({
   id: z.number().optional(),
   name: z.string()
-    .min(1, "Name is required")
-    .regex(/^[a-zA-Z0-9\s]+$/, "Name can only contain letters, numbers, and spaces")
-    .max(50, "Name cannot exceed 50 characters"),
+    .min(3, "Name is required")
+    .max(15, "Name cannot exceed 15 characters")
+    .regex(/^[a-zA-Z0-9\s]+$/, "Name can only contain letters, numbers, and spaces"),
   email: z.string().email("Invalid email").nullable().optional().or(z.literal('')),
   phone: z.string()
     .min(10, "Phone number must be at least 10 digits")
