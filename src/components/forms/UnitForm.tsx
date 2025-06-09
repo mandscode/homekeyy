@@ -146,9 +146,9 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
     enabled: !!unitId
   });
   // Update form when unit data is loaded
+
   useEffect(() => {
     if (unitData) {
-
       const formData = {
         number: unitData.number || "",
         floor: unitData.floor || "",
@@ -162,7 +162,7 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
         meterType: unitData.meterType || "",
         meterBox: unitData.meterBox || "",
         initialMeterReading: unitData.initialMeterReading || "",
-        status: unitData.status || "AVAILABLE",
+        status: unitData.status && unitData.status !== "" ? unitData.status : "AVAILABLE",
         rent: unitData.unitRentalDetails?.[0]?.rent?.toString() || "",
         sercurityDeposit: unitData.unitRentalDetails?.[0]?.sercurityDeposit?.toString() || "",
         rentalType: unitData.unitRentalDetails?.[0]?.rentalType || "monthly",
@@ -180,10 +180,11 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
           size: 0
         })) || []
       };
-
+      console.log(formData);
       form.reset(formData as UnitFormData);
     }
   }, [unitData, form]);
+  
 
   const onSubmit = async (data: UnitFormData) => {
     setLoading(true)
@@ -342,6 +343,12 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
     form.setValue('images', validFiles, { shouldValidate: true });
   }
 
+  const handleSelectChange = (name: string, value: string) => {
+    if (value !== "") {
+      form.setValue(name as keyof UnitFormData, value as keyof UnitFormData, { shouldValidate: true });
+    }
+  }
+
   const rentalTypeOptions = [
     { value: "monthly", label: "Monthly" },
     { value: "yearly", label: "Yearly" }
@@ -349,6 +356,12 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
   const meterTypeOptions = [
     { value: "SUB", label: "Sub Meter" },
     { value: "MAIN", label: "Main Meter" }
+  ];
+  const statusOptions = [
+    { value: "AVAILABLE", label: "Available" },
+    { value: "BOOKED", label: "Booked" },
+    { value: "OCCUPIED", label: "Occupied" },
+    { value: "NOTICE_PERIOD", label: "Notice Period" }
   ];
 
   const formFields: FormField[] = [
@@ -365,12 +378,7 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
       name: "status", 
       label: "Status",
       type: "select",
-      options: [
-        { value: "AVAILABLE", label: "Available" },
-        { value: "BOOKED", label: "Booked" },
-        { value: "OCCUPIED", label: "Occupied" },
-        { value: "NOTICE_PERIOD", label: "Notice Period" }
-      ]
+      options: statusOptions
     },
     { name: "rent", label: "Rent Amount", type: "text" },
     { name: "sercurityDeposit", label: "Security Deposit", type: "text" },
@@ -393,13 +401,16 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
           <CardContent className="p-6">
             <form onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-8">
               <div className="grid grid-cols-3 gap-6">
-                {formFields.map(({ name, label, type = "text", options }) => (
+                {formFields.map(({ name, label, type = "text", options }) => {
+                  const value = form.watch(name);
+                  console.log(value);
+                  return (
                   <div key={name} className="flex flex-col gap-3">
                     <Label htmlFor={name}>{label}</Label>
                     {type === "select" && options ? (
                       <Select
-                        onValueChange={(value) => form.setValue(name, value)}
-                        value={form.watch(name) as string}
+                        onValueChange={(value) => handleSelectChange(name, value)}
+                        value={value as string}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder={`Select ${label}`} />
@@ -421,7 +432,7 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
                       />
                     )}
                   </div>
-                ))}
+                )})}
               </div>
 
               <div className="flex flex-col gap-3">

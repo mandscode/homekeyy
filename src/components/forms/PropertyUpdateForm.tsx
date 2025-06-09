@@ -488,6 +488,7 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
                   <Label htmlFor={name}>{label}</Label>
                   <Input
                     id={name}
+                    disabled={name === "propertyName" || name === "address" || name === "city" || name === "zipCode" || name === "latitude" || name === "longitude"}
                     type={type}
                     placeholder={label}
                     {...form.register(name, { valueAsNumber: type === "number" })}

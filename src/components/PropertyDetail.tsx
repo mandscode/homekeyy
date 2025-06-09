@@ -7,7 +7,7 @@ import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/axios';
 import { useParams } from 'next/navigation';
 import { UnitModal } from './ui/unit-modal';
@@ -80,17 +80,37 @@ type FlatImage = {
   alt:string;
 }
 
-type FlatStatus = 'available' | 'notice' | 'occupied';
+type FlatStatus = 'AVAILABLE' | 'BOOKED' | 'OCCUPIED' | 'NOTICE_PERIOD';
 
 const FlatStatusBadge = ({ status }: { status: string }) => {
-  const colorMap: Record<string, string> = {
-    Available: "bg-green-100 text-green-800",
-    "Under notice": "bg-yellow-100 text-yellow-800",
-    Occupied: "bg-red-100 text-red-800",
+  const statusMap: Record<string, { label: string; className: string }> = {
+    AVAILABLE: {
+      label: "Available",
+      className: "bg-green-100 text-green-800"
+    },
+    BOOKED: {
+      label: "Booked",
+      className: "bg-blue-100 text-blue-800"
+    },
+    OCCUPIED: {
+      label: "Occupied",
+      className: "bg-red-100 text-red-800"
+    },
+    NOTICE_PERIOD: {
+      label: "Notice Period",
+      className: "bg-yellow-100 text-yellow-800"
+    }
+  };
+
+  const statusInfo = statusMap[status] || {
+    label: status,
+    className: "bg-gray-100 text-gray-800"
   };
 
   return (
-    <span className={`text-sm px-3 py-1 rounded ${colorMap[status]}`}>{status}</span>
+    <span className={`text-sm px-3 py-1 rounded ${statusInfo.className}`}>
+      {statusInfo.label}
+    </span>
   );
 };
 
@@ -102,6 +122,8 @@ export default function PropertyDetail() {
 
   const params = useParams();
   const id = params.id as string;
+
+  const queryClient = useQueryClient();
 
   const fetchProperty = async (): Promise<PropertyData> => {
     const res = await api.get(apiEndpoints.Property.endpoints.getPropertyById.path.replace("{id}", id));
@@ -151,13 +173,13 @@ export default function PropertyDetail() {
   ? property.units.filter((flat:FlatDetails) => flat.floor.toString() === selectedFloor.toString())
   : property.units;
   
-  const statusCounts = property.units.reduce<StatusCounts>(
-    (acc, flat:FlatDetails) => {
-      const key = flat.status.toLowerCase() as FlatStatus; // normalize keys
-      if (key in acc) acc[key]++;
+  const statusCounts = property.units.reduce<Record<string, number>>(
+    (acc, flat: FlatDetails) => {
+      const status = flat.status;
+      acc[status] = (acc[status] || 0) + 1;
       return acc;
     },
-    { available: 0, notice: 0, occupied: 0 }
+    {}
   );
 
   // const handleImageChange = (number: string, files: FileList | null) => {
@@ -346,7 +368,7 @@ export default function PropertyDetail() {
               <div>{flat.floor}</div>
               <div>{flat.rooms}</div>
               <div>{flat.bathrooms}</div>
-              <span className="bg-green-100 px-2 py-1 rounded">
+              <span className="px-2 py-1 rounded">
                 <FlatStatusBadge status={flat.status} />
               </span>
               <Button variant="link" onClick={() => {
@@ -360,7 +382,17 @@ export default function PropertyDetail() {
         })}
       </div>
     </div>
-    <UnitModal open={open} onOpenChange={setOpen} unitId={Number(unitId)}/>
+    <UnitModal 
+      open={open} 
+      onOpenChange={(newOpen) => {
+        setOpen(newOpen);
+        if (!newOpen) {
+          // Invalidate the property query when modal is closed
+          queryClient.invalidateQueries({ queryKey: ["property", id] });
+        }
+      }} 
+      unitId={Number(unitId)}
+    />
   </>   
   );  
 }
