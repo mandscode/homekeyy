@@ -22,13 +22,6 @@ type Amenity = {
   updatedAt: string | Date;
 };
 
-
-interface StatusCounts {
-  available: number;
-  notice: number;
-  occupied: number;
-}
-
 type PropertyData = {
   propertyAmenities: {
     amenity: Amenity;

@@ -2,7 +2,7 @@
 
 import {
     QueryClient,
-    QueryClientProvider as TanStackQueryClientProvider,
+    QueryClientProvider as TanStackQueryClientProvider, 
 } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ReactNode, useState } from 'react'
