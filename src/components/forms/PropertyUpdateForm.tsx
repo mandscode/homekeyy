@@ -18,10 +18,10 @@ import { useRouter } from "next/navigation"
 // Assume these are implemented or stubbed
 import ImageUpload from "@/components/forms/ImageUpload"
 import ServiceSchedule from "@/components/forms/ServiceSchedule"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import Image from "next/image"
 
-import { useQueryClient } from '@tanstack/react-query';
+import FlatsUpload from "./FlatsUpload"
 
 const formSchema = z.object({
   propertyName: z
@@ -195,6 +195,11 @@ interface FlatDetails {
   rooms: number;
   baths: number;
   status: 'available' | 'notice' | 'occupied';
+  sqft?: number;
+  parkingNumber?: string;
+  gasConnection?: boolean;
+  powerBackup?: boolean;
+  block?: string;
 }
 
 interface PropertyUpdateFormProps {
@@ -211,6 +216,8 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
   const [schedules, setSchedules] = useState<ScheduleItem[]>([
     { serviceType: "", day: "", startTime: `""`, endTime: `""` },
   ])
+
+  const [flats, setFlats] = useState<FlatDetails[]>([])
   
   const form = useForm<PropertyData>({
     defaultValues: {
@@ -261,7 +268,7 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
       });
     }
   }
-  
+
   const propertySubmit = async (data: PropertyData) => { 
     setLoading(true)
     
@@ -299,6 +306,18 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
         images: [...data.images, ...uploadedPropertyImages].map(img => ({
           url: img.url,
           alt: 'property-image'
+        })),
+        units: flats.map(flat => ({
+          number: flat.flatNo.toString(),
+          floor: flat.floor.toString(),
+          rooms: flat.rooms.toString(),
+          bathrooms: flat.baths.toString(),
+          status: flat.status,
+          sqFt: flat.sqft?.toString() || '0',
+          parkingNumber: flat.parkingNumber,
+          gasConnection: flat.gasConnection || false,
+          powerBackup: flat.powerBackup || false,
+          block: flat.block
         }))
       };
 
@@ -310,7 +329,7 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
         });
         queryClient.invalidateQueries({ queryKey: ["property", propertyId] });
         onSuccess?.();
-        router.push('/properties');
+        router.push(`/properties/details/${propertyId}`);
       }
     } catch (err: unknown) {
       let message = "Failed to update property";
@@ -417,11 +436,11 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
           }));
 
           // Map service schedules to the expected format
-          const mappedServiceSchedules = property.serviceSchedules.map((ss: ServiceScheduleProps) => ({
-            serviceType: ss.service.type,
-            day: ss.dayOfWeek,
-            startTime: ss.startTime,
-            endTime: ss.endTime
+          const mappedServiceSchedules = property.serviceSchedules?.map((ss: ServiceScheduleProps) => ({
+            serviceType: ss?.service?.type,
+            day: ss?.dayOfWeek,
+            startTime: ss?.startTime,
+            endTime: ss?.endTime
           }));
 
 
@@ -457,6 +476,7 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
               status: unit.status.toLowerCase() as 'available' | 'notice' | 'occupied'
             }))
           });
+          
           // Update the schedules state
           setSchedules(mappedServiceSchedules);
         }
@@ -602,8 +622,14 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
             </div>
 
             {/* Service Schedule Placeholder */}
+            
             <div>
               <ServiceSchedule schedulesProps={schedules} setSchedulesProps={setSchedules} />
+            </div>
+
+                        {/* Flat Details Upload */}
+            <div>
+              <FlatsUpload flats={flats} setFlats={setFlats} propertyId={propertyId.toString()}/>
             </div>
 
             <div className="flex justify-end">

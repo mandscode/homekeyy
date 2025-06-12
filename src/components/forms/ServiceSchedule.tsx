@@ -73,7 +73,7 @@ export default function ServiceSchedule({ schedulesProps, setSchedulesProps }: P
         </div>
       </div>
 
-      {schedulesProps.length > 0 && schedulesProps?.map((item, index) => (
+      {schedulesProps?.length > 0 && schedulesProps?.map((item, index) => (
         <div key={index} className="grid grid-cols-3 gap-2 items-center">
           {/* Service type select */}
           <Select
@@ -84,8 +84,8 @@ export default function ServiceSchedule({ schedulesProps, setSchedulesProps }: P
               <SelectValue placeholder="Service type" />
             </SelectTrigger>
             <SelectContent>
-              {services && services.length > 0 && services.map((s: ServiceItem) => (
-                <SelectItem value={s.type} key={s.id}>{s.type}</SelectItem>
+              {services && services?.length > 0 && services?.map((s: ServiceItem) => (
+                <SelectItem value={s?.type?.length > 0 ? s?.type : "default"} key={s?.id}>{s?.type?.length > 0 ? s?.type : "default"}</SelectItem>
               ))}
             </SelectContent>
           </Select>

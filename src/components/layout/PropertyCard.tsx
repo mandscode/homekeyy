@@ -1,10 +1,12 @@
 import Image from "next/image";
 import { Property } from "./PropertyList";
 import FullScreenLoader from "../utils/FullScreenLoader";
-import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export const PropertyCard = ({ property }: { property: Property }) => {
-
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   function cleanImageUrl(url: string): string {
     try {
@@ -19,37 +21,32 @@ export const PropertyCard = ({ property }: { property: Property }) => {
   const rawUrl = property.images?.[0]?.url || "";
   const imageUrl = cleanImageUrl(rawUrl);
 
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    router.push(`/properties/details/${property.id}`);
+  };
+
   return (
     <>
-      {
-        property.name ?
-        <Link href={`/properties/details/${property.id}`}>
-          <div className="bg-white overflow-hidden">
-            {property.images?.length > 0 && property.images[0]?.url ? (
+      {isLoading && <FullScreenLoader />}
+      {property.name ? (
+        <div onClick={handleClick} className="cursor-pointer">
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="relative h-48">
               <Image
                 src={imageUrl}
-                alt={property.name || 'Property image'}
-                className="w-full h-[170px] object-cover"
-                width={100}
-                height={170}
-                priority
+                alt={property.name}
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                className="object-cover"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=';
                 }}
                 unoptimized
               />
-            ) : (
-              <Image
-                src="/placeholder.jpg"
-                alt="Placeholder image"
-                className="w-full h-[170px] object-cover"
-                width={100}
-                height={170}
-                priority
-              />
-            )}
-
+            </div>
             <div className="p-4">
               <h3 className="text-lg font-semibold">{property.name}</h3>
               <div className="flex justify-between text-sm text-gray-500 mt-2">
@@ -66,11 +63,10 @@ export const PropertyCard = ({ property }: { property: Property }) => {
               </div>
             </div>
           </div>
-        </Link>
-
-        :
-        <FullScreenLoader/>
-      }
+        </div>
+      ) : (
+        <FullScreenLoader />
+      )}
     </>
   );
-} 
+}; 

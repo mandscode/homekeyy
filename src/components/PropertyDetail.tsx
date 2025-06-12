@@ -6,12 +6,13 @@ import { Clock } from 'lucide-react';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/axios';
 import { useParams } from 'next/navigation';
 import { UnitModal } from './ui/unit-modal';
 import apiEndpoints from '@/lib/apiEndpoints';
+import { DeleteUnitModal } from './ui/delete-unit-modal';
 
 type Amenity = {
   id: number;
@@ -112,7 +113,9 @@ export default function PropertyDetail() {
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
   const [open, setOpen] = useState(false)
   const [unitId, setUnitId] = useState<number>()
-
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteUnitId, setDeleteUnitId] = useState<number>()
+  
   const params = useParams();
   const id = params.id as string;
 
@@ -160,13 +163,17 @@ export default function PropertyDetail() {
     queryKey: ["property", id],
     queryFn: fetchProperty,
   });
+
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["property", id] });
+  }, [id, queryClient]);
+
+  const uniqueFloors = [...new Set((property?.units || []).map(flat => flat.floor))];
+  const filteredFlats = selectedFloor && property?.units
+    ? property?.units.filter((flat:FlatDetails) => flat.floor.toString() === selectedFloor.toString())
+    : property?.units || [];
   
-  const uniqueFloors = [...new Set(property.units.map(flat => flat.floor))];
-  const filteredFlats = selectedFloor && property.units
-  ? property.units.filter((flat:FlatDetails) => flat.floor.toString() === selectedFloor.toString())
-  : property.units;
-  
-  const statusCounts = property.units.reduce<Record<string, number>>(
+  const statusCounts = (property?.units || []).reduce<Record<string, number>>(
     (acc, flat: FlatDetails) => {
       const status = flat.status;
       acc[status] = (acc[status] || 0) + 1;
@@ -228,7 +235,7 @@ export default function PropertyDetail() {
       <div>
         <h3 className="font-medium mb-2">Images</h3>
         <div className="flex gap-4 flex-wrap">
-          {property.images.map((img, idx) => (
+          {(property?.images || []).map((img, idx) => (
             <div key={idx} className="w-28 h-28 overflow-hidden rounded relative bg-gray-100">
               <Image
                 src={img.url}
@@ -244,7 +251,7 @@ export default function PropertyDetail() {
               />
             </div>
           ))}
-          {property.images.length === 0 && (
+          {(!property?.images || property.images.length === 0) && (
             <div className="w-28 h-28 overflow-hidden rounded bg-gray-100 flex items-center justify-center text-gray-400">
               No images
             </div>
@@ -274,7 +281,7 @@ export default function PropertyDetail() {
           </div>
           {/* <Button onClick={addSchedule} variant="destructive" size="sm">Add more</Button> */}
         </div>
-        {property.serviceSchedules.map((item, idx) => (
+        {property?.serviceSchedules?.map((item, idx) => (
             <div key={idx} className="grid grid-cols-[30%_30%_40%] gap-3 mt-2 items-center">
               <div>{item.service.type}</div>
               <Input disabled defaultValue={item.dayOfWeek} className="w-full" />
@@ -364,12 +371,20 @@ export default function PropertyDetail() {
               <span className="px-2 py-1 rounded">
                 <FlatStatusBadge status={flat.status} />
               </span>
+              <div className='flex gap-2 justify-center'>
               <Button variant="link" onClick={() => {
                 setUnitId(flat.id);
                 setOpen(true);
               }} className="text-blue-600 px-0 text-sm">
                 Edit
               </Button>
+              <Button variant="link" onClick={() => {
+                setDeleteUnitId(flat.id);
+                setDeleteOpen(true);
+              }} className="text-blue-600 px-0 text-sm">
+                Delete
+              </Button>
+                </div>
             </div>
           )
         })}
@@ -385,6 +400,16 @@ export default function PropertyDetail() {
         }
       }} 
       unitId={Number(unitId)}
+    />
+    <DeleteUnitModal
+      open={deleteOpen}
+      onOpenChange={(newOpen) => {
+        setDeleteOpen(newOpen);
+        if (!newOpen) {
+          queryClient.invalidateQueries({ queryKey: ["property", id] });
+        }
+      }}
+      unitId={deleteUnitId}
     />
   </>   
   );  

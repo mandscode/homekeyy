@@ -5,17 +5,34 @@ import { Sidebar } from "@/components/admin-panel/sidebar";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useStore } from "@/hooks/use-store";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import FullScreenLoader from "@/components/utils/FullScreenLoader";
 
 export default function AdminPanelLayout({
   children
 }: {
   children: React.ReactNode;
 }) {
+  const [isLoading, setIsLoading] = useState(false);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    setIsLoading(true);
+    const timeout = setTimeout(() => {
+      setIsLoading(false);
+    }, 500); // Minimum loading time to prevent flickering
+    
+    return () => clearTimeout(timeout);
+  }, [pathname, searchParams]);
+
   const sidebar = useStore(useSidebar, (x) => x);
   if (!sidebar) return null;
   const { getOpenState, settings } = sidebar;
   return (
     <>
+      {isLoading && <FullScreenLoader />}
       <Sidebar />
       <main
         className={cn(

@@ -58,6 +58,7 @@ export default function LoginForm() {
       if (isFirstLogin) {
         setUserId(data.phone)
         Cookies.set("tempToken", token, { expires: 1 })
+        setLoading(false)
         setShowDialog(true)
       } else {
         toast({
@@ -72,9 +73,10 @@ export default function LoginForm() {
         })
         router.push("/dashboard")
       }
+      setLoading(false)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Login failed";
-
+      setLoading(false)
       toast({
         title: message,
         description: "Please try again"
@@ -83,9 +85,7 @@ export default function LoginForm() {
         type: "manual",
         message: message,
       })
-    } finally {
-      // setLoading(false)
-    }
+    } 
   }
   
   const handleChangePassword = async () => {

@@ -86,7 +86,7 @@ const apiEndpoints = {
         },
         deleteUnit: {
           method: "DELETE",
-          path: "/api/v1/unit/{id}",
+          path: "/web/unit/{id}",
           description: "Delete a unit",
         },
       },
