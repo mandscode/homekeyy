@@ -17,9 +17,10 @@ type Amenity = {
 
 
 interface StatusCounts {
-  available: number;
-  notice: number;
-  occupied: number;
+  AVAILABLE: number;
+  BOOKED: number;
+  OCCUPIED: number;
+  NOTICE_PERIOD: number;
 }
 
 export type PropertyData = {
@@ -42,9 +43,9 @@ export type PropertyData = {
   zipCode: string;
   latitude: string;
   longitude: string;
-  totalMotors: string;
-  mainMeters: string;
-  subMeters: string;
+  totalMotors?: string;
+  mainMeters?: string;
+  subMeters?: string;
   subMeterRatePerUnit: number;
   fixedWaterBillAmount: number;
   flatDetails: FlatDetails[];
@@ -58,13 +59,14 @@ type FlatDetails = {
   status: FlatStatus;
 }
 
-type FlatStatus = 'available' | 'notice' | 'occupied';
+type FlatStatus = 'AVAILABLE' | 'BOOKED' | 'OCCUPIED' | 'NOTICE_PERIOD';
 
 const FlatStatusBadge = ({ status }: { status: string }) => {
   const colorMap: Record<string, string> = {
-    Available: "bg-green-100 text-green-800",
-    "Under notice": "bg-yellow-100 text-yellow-800",
-    Occupied: "bg-red-100 text-red-800",
+    AVAILABLE: "bg-green-100 text-green-800",
+    BOOKED: "bg-yellow-100 text-yellow-800",
+    OCCUPIED: "bg-red-100 text-red-800",
+    NOTICE_PERIOD: "bg-blue-100 text-blue-800",
   };
 
   return (
@@ -88,11 +90,12 @@ export default function PropertyInfo({data, onImagesChange}:{data:PropertyData, 
   
   const statusCounts = data.flatDetails.reduce<StatusCounts>(
     (acc, flat:FlatDetails) => {
-      const key = flat.status.toLowerCase() as FlatStatus; // normalize keys
+
+      const key = flat.status as FlatStatus; // normalize keys
       if (key in acc) acc[key]++;
       return acc;
     },
-    { available: 0, notice: 0, occupied: 0 }
+    { AVAILABLE: 0, BOOKED: 0, OCCUPIED: 0, NOTICE_PERIOD: 0 }
   );
 
   const handleImageChange = (flatNo: string, files: FileList | null) => {
@@ -237,9 +240,9 @@ export default function PropertyInfo({data, onImagesChange}:{data:PropertyData, 
               </Select>
 
             <div className="flex gap-4 text-sm">
-              <span className="bg-green-100 px-2 py-1 rounded">Available  {statusCounts.available}</span>
-              <span className="bg-yellow-100 px-2 py-1 rounded">Notice {statusCounts.notice}</span>
-              <span className="bg-red-100 px-2 py-1 rounded">Occupied {statusCounts.occupied}</span>
+            <span className="bg-green-100 px-2 py-1 rounded">Available  {statusCounts.AVAILABLE}</span>
+              <span className="bg-yellow-100 px-2 py-1 rounded">Notice {statusCounts.NOTICE_PERIOD}</span>
+              <span className="bg-red-100 px-2 py-1 rounded">Occupied {statusCounts.OCCUPIED}</span>
             </div>
           </div>
         </div>
@@ -286,7 +289,7 @@ export default function PropertyInfo({data, onImagesChange}:{data:PropertyData, 
               <div>{flat.floor}</div>
               <div>{flat.rooms}</div>
               <div>{flat.baths}</div>
-              <span className="bg-green-100 px-2 py-1 rounded">
+              <span className="">
                 <FlatStatusBadge status={flat.status} />
               </span>
               {/* <Button variant="link" className="text-blue-600 px-0 text-sm">

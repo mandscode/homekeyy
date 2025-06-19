@@ -98,7 +98,7 @@ const PropertyList = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 6; // Number of properties per page
-
+    
     const fetchProperties = async () => {
         const res = await api.get(apiEndpoints.Property.endpoints.getAllProperties.path);
         return res.data.properties ?? [];

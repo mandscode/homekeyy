@@ -8,12 +8,11 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import ImageUpload from "@/components/forms/ImageUpload"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import api from "@/lib/axios"
 import { Card, CardContent } from "../ui/card"
 import { useEffect, useState } from "react"
-import { useToast } from "@/hooks/use-toast"
-import { Toaster } from "@/components/ui/toaster"
+import { useToast } from "@/components/ui/use-toast"
 import FullScreenLoader from "../utils/FullScreenLoader"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 import Image from "next/image"
@@ -119,7 +118,7 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
   const [loading, setLoading] = useState(false)
   const [images, setImages] = useState<File[]>([])
   const { toast } = useToast()
-
+  const queryClient = useQueryClient();
   const form = useForm<UnitFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -180,7 +179,6 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
           size: 0
         })) || []
       };
-      console.log(formData);
       form.reset(formData as UnitFormData);
     }
   }, [unitData, form]);
@@ -261,7 +259,7 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
         : await api.post("/unit/register", payload);
 
       if (response.status === 1) {
-
+        queryClient.invalidateQueries({ queryKey: ["unit", unitId] });
         toast({
           title: unitId ? "Unit updated successfully" : "Unit created successfully",
           variant: "default",
@@ -296,9 +294,10 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
     if (errors instanceof Error) {
       message = errors.message;
     }
+
     const firstErrorKey = Object.keys(errors)[0] as keyof UnitFormData;
     const error = errors[firstErrorKey];
-
+    console.log(error);
     if (error?.message) {
       message = error.message;
     }
@@ -395,7 +394,6 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
   return (
     <>
       {loading && <FullScreenLoader />}
-      <Toaster />
       <div className="h-[calc(100vh-4rem)]">
         <Card className="rounded-lg border-none">
           <CardContent className="p-6">
@@ -403,7 +401,6 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
               <div className="grid grid-cols-3 gap-6">
                 {formFields.map(({ name, label, type = "text", options }) => {
                   const value = form.watch(name);
-                  console.log(value);
                   return (
                   <div key={name} className="flex flex-col gap-3">
                     <Label htmlFor={name}>{label}</Label>

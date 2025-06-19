@@ -11,15 +11,18 @@ import { Button } from "@/components/ui/button"
 // Assume these are implemented or stubbed
 import ImageUpload from "@/components/forms/ImageUpload"
 import ServiceSchedule from "@/components/forms/ServiceSchedule"
-import FlatDetailsUpload from "@/components/forms/FlatDetailsUpload"
-import { useQuery } from "@tanstack/react-query"
+import {FlatDetailsUpload} from "@/components/forms/FlatDetailsUpload"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import api from "@/lib/axios"
 import { Card, CardContent } from "../ui/card"
 import { useEffect, useState } from "react"
 import PropertyInfo, { PropertyData } from "../PropertyInfo"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import FullScreenLoader from "../utils/FullScreenLoader"
+import { FlatDetails } from "./PropertyUpdateForm"
+import { useRouter } from "next/navigation"
+
 
 const formSchema = z.object({
   propertyName: z
@@ -33,8 +36,12 @@ const formSchema = z.object({
   city: z
     .string()
     .min(1, { message: "City is required" }),
-
-  zipCode: z
+  
+    state: z
+    .string()
+    .min(1, { message: "State is required" }),
+  
+    zipCode: z
     .string()
     .min(1, { message: "ZIP Code is required" }),
 
@@ -51,7 +58,7 @@ const formSchema = z.object({
     .min(0, { message: "Sub Meter Rate Per Unit cannot be negative" }),
 
   fixedWaterBillAmount: z
-    .number()
+    .number({ invalid_type_error: "Please enter a valid number for Fixed Water Bill Amount" })
     .min(0, { message: "Fixed Water Bill Amount must be greater than 0" }),
 
   amenities: z
@@ -91,11 +98,21 @@ const formSchema = z.object({
       floor: z.number({ invalid_type_error: "Floor must be a number" }),
       rooms: z.number({ invalid_type_error: "Rooms must be a number" }),
       baths: z.number({ invalid_type_error: "Baths must be a number" }),
-      status: z.union([
-        z.literal("available"),
-        z.literal("notice"),
-        z.literal("occupied"),
-      ])
+      status: z.enum(["AVAILABLE", "BOOKED", "OCCUPIED", "NOTICE_PERIOD"]),
+      sqft: z.number().optional(),
+      parkingNumber: z.string().optional(),
+      gasConnection: z.boolean().optional(),
+      powerBackup: z.boolean().optional(),
+      block: z.string().optional(),
+      meterType: z.string().optional(),
+      rentalType: z.string(),
+      rentAmount: z.number(),
+      securityDeposit: z.number(),
+      effectiveFrom: z.string(),
+      effectiveTo: z.string(),
+      amenities: z.array(z.any()),
+      meterBox: z.string(),
+      initialMeterReading: z.string()
     })),
 });
 
@@ -138,9 +155,12 @@ type Property = {
   propertyName: string;
   address: string;
   city: string;
+  state: string;
   zipCode: string;
   latitude: string;
   longitude: string;
+  subMeterRatePerUnit: number;
+  fixedWaterBillAmount: number;
   amenities: Amenity[];
   images: PropertyImage[];
   serviceSchdule: ServiceSchedule[];
@@ -171,17 +191,6 @@ type ServiceSchedule = {
   endTime: string;
 };
 
-type FlatDetails = {
-  flatNo: string;
-  floor: number;
-  rooms: number;
-  baths: number;
-  status: FlatStatus; // Enum for possible statuses
-};
-
-// Optional: For more strict typing of status values
-type FlatStatus = 'available' | 'notice' | 'occupied';
-
 // If you need to make some fields optional for form handling:
 type PropertyForm = Partial<Property> & {
   // Required fields can be specified here
@@ -195,14 +204,13 @@ export default function PropertyForm() {
   const [loading, setLoading] = useState(false)
   const [flatImages, setFlatImages] = useState<Record<string, File[]>>({});
   const { toast } = useToast()
-
   const [images, setImages] = useState<File[]>([])
+  const router = useRouter()
+  const queryClient = useQueryClient()
   const [schedules, setSchedules] = useState<ScheduleItem[]>([
     { serviceType: "", day: "", startTime: `""`, endTime: `""` },
   ])
-  const [flats, setFlats] = useState<FlatDetails[]>([{
-    flatNo:'', floor:0,rooms:0, baths:0, status:'notice'
-  }])
+  const [flats, setFlats] = useState<FlatDetails[]>([])
   
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -210,6 +218,7 @@ export default function PropertyForm() {
       propertyName: '',
       address: '',
       city: '',
+      state: '',
       zipCode: '',
       latitude: '',
       longitude: '',
@@ -217,34 +226,65 @@ export default function PropertyForm() {
       images: [],
       serviceSchdule: [],
       flatDetails: []
-    }
+    },
+    mode: "onChange",
+    reValidateMode: "onChange"
   })
 
-  const onSubmit = (data:Property) => {
-    console.log(data)
-    setStep("summary")
+  const onSubmit = (data: Property) => {
+    console.log("Form submitted", data);
+    setStep("summary");
   }
-  
-  const onError = (errors:FieldErrors<Property>) => {
+
+  const onError = (errors: FieldErrors<Property>) => {
+    console.log("onError triggered", errors);
     let message = "Validation error";
-    if (errors instanceof Error) {
-      message = errors.message;
-    }
-    const firstErrorKey = Object.keys(errors)[0] as keyof Property;
-    const error = errors[firstErrorKey];
+    
+    // Check for specific field errors
+    if (errors.propertyName?.message) {
+      message = errors.propertyName.message;
+    } else if (errors.address?.message) {
+      message = errors.address.message;
+    } else if (errors.city?.message) {
+      message = errors.city.message;
+    } else if (errors.state?.message) {
+      message = errors.state.message;
+    } else if (errors.zipCode?.message) {
+      message = errors.zipCode.message;
+    } else if (errors.latitude?.message) {
+      message = errors.latitude.message;
+    } else if (errors.longitude?.message) {
+      message = errors.longitude.message;
+    } else if (errors.images?.message) {
+      message = errors.images.message;
+    } else if (errors.subMeterRatePerUnit?.message) {
+      message = errors.subMeterRatePerUnit.message;
+    } else if (errors.fixedWaterBillAmount?.message) {
+      message = errors.fixedWaterBillAmount.message;
+    } else if (errors.amenities?.message) {
+      message = errors.amenities.message;
+    } else if (errors.serviceSchdule) {
+      message = "Service schedule is required";
+    } else {
+      // Check for array errors
+      const firstErrorKey = Object.keys(errors)[0] as keyof Property;
+      const error = errors[firstErrorKey];
 
-    if (Array.isArray(error) && error.length > 0) {
-      const nestedError = error[0]; // first item in the array
-      const nestedFieldKey = Object.keys(nestedError)[0];
-      message = nestedError[nestedFieldKey]?.message || message;
-    } else if (error?.message) {
-      message = error.message;
+      if (Array.isArray(error) && error.length > 0) {
+        const nestedError = error[0];
+        message = nestedError?.message || message;
+      } else if (error?.message) {
+        message = error.message;
+      }
     }
 
+    console.log(message, "message");
     toast({
-      title: message
+      title: "Error",
+      description: message,
+      variant: "destructive"
     });
-  }
+  };
   
   const propertySubmit = async (data: Property) => { 
     setLoading(true)
@@ -269,7 +309,6 @@ export default function PropertyForm() {
           }));
 
           const uploadedImages = await uploadImagesToS3(rawImages, "property", flat.flatNo);
-
           return {
             ...flat,
             images: uploadedImages,
@@ -290,7 +329,9 @@ export default function PropertyForm() {
         toast({
           title: "Property listed successfully"
         })
-        setStep("form")
+
+        queryClient.invalidateQueries({ queryKey: ["property", response.data.newProperty.id] });
+        router.push(`/properties/details/${response.data.newProperty.id}`);      
       }
     } catch (err: unknown) {
       let message = "Login failed";
@@ -357,6 +398,7 @@ export default function PropertyForm() {
     { name: "propertyName", label: "Property Name" },
     { name: "address", label: "Address" },
     { name: "city", label: "City" },
+    { name: "state", label: "State" },
     { name: "zipCode", label: "ZIP Code", type: "text" },
     { name: "latitude", label: "Latitude" },
     { name: "longitude", label: "Longitude" },
@@ -385,8 +427,8 @@ export default function PropertyForm() {
 
   return (
     <>
-      {loading && <FullScreenLoader />}
       <Toaster />
+      {loading && <FullScreenLoader />}
       <Card className="rounded-lg border-none mt-6">
         <CardContent className="p-6">
         {step === "form" ? (
@@ -403,7 +445,6 @@ export default function PropertyForm() {
                       valueAsNumber: type === "number",
                       onChange: (e) => {
                         if (name === "zipCode") {
-                          // Remove any non-numeric characters
                           const value = e.target.value.replace(/[^0-9]/g, '');
                           e.target.value = value;
                           form.setValue(name, value);
@@ -415,7 +456,7 @@ export default function PropertyForm() {
               ))}
             </div>
 
-            {/* Image Upload Placeholder */}
+            {/* Image Upload with Error Display */}
             <div className="flex flex-col gap-3">
               <Label>Images</Label>
               <ImageUpload onChange={handleImagesChange}/>
@@ -525,7 +566,7 @@ export default function PropertyForm() {
 
             {/* Flat Details Upload */}
             <div>
-              <FlatDetailsUpload flats={flats} setFlats={setFlats}/>
+            <FlatDetailsUpload onFlatsUploaded={setFlats}/>
             </div>
 
             <div className="flex justify-end">

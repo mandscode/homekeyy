@@ -21,7 +21,7 @@ import ServiceSchedule from "@/components/forms/ServiceSchedule"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import Image from "next/image"
 
-import FlatsUpload from "./FlatsUpload"
+import FlatsUpload, { Amenities } from "./FlatsUpload"
 
 const formSchema = z.object({
   propertyName: z
@@ -173,6 +173,18 @@ type Unit = {
   rooms: string;
   bathrooms: string;
   status: string;
+  sqFt: string;
+  parkingNumber: string;
+  gasConnection: boolean;
+  powerBackup: boolean;
+  block: string;
+  meterType: string;
+  rentalType: string;
+  rentAmount: number;
+  securityDeposit: number;
+  effectiveFrom: string;
+  effectiveTo: string;
+  amenities: Amenities[];
 }
 
 type PropertyImage = {
@@ -189,17 +201,26 @@ type ServiceSchedule = {
   endTime: string;
 };
 
-interface FlatDetails {
+export interface FlatDetails {
   flatNo: string;
   floor: number;
   rooms: number;
   baths: number;
-  status: 'available' | 'notice' | 'occupied';
+  status: 'AVAILABLE' | 'BOOKED' | 'OCCUPIED' | 'NOTICE_PERIOD';
   sqft?: number;
   parkingNumber?: string;
   gasConnection?: boolean;
   powerBackup?: boolean;
   block?: string;
+  meterType?: string;
+  rentalType: string;
+  rentAmount: number;
+  securityDeposit: number;
+  effectiveFrom: string;
+  effectiveTo: string;
+  amenities: Amenities[];
+  meterBox: string;
+  initialMeterReading: string;
 }
 
 interface PropertyUpdateFormProps {
@@ -281,7 +302,6 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
       }));
       
       const uploadedPropertyImages = await uploadImagesToS3(propertyImages, "property", data.propertyName);
-    
       // Transform the data to match Prisma schema
       const payload = {
         name: data.propertyName,
@@ -311,13 +331,22 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
           number: flat.flatNo.toString(),
           floor: flat.floor.toString(),
           rooms: flat.rooms.toString(),
-          bathrooms: flat.baths.toString(),
+          baths: flat.baths.toString(),
           status: flat.status,
+          block: flat.block,
           sqFt: flat.sqft?.toString() || '0',
           parkingNumber: flat.parkingNumber,
           gasConnection: flat.gasConnection || false,
           powerBackup: flat.powerBackup || false,
-          block: flat.block
+          meterBox: flat.meterBox,
+          initialMeterReading: flat.initialMeterReading,
+          rentAmount: flat.rentAmount,
+          securityDeposit: flat.securityDeposit,
+          rentalType: flat.rentalType,
+          meterType: flat.meterType,
+          effectiveFrom: flat.effectiveFrom,
+          effectiveTo: flat.effectiveTo,
+          amenities: flat.amenities,
         }))
       };
 
@@ -473,7 +502,19 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
               floor: parseInt(unit.floor),
               rooms: parseInt(unit.rooms),
               baths: parseInt(unit.bathrooms),
-              status: unit.status.toLowerCase() as 'available' | 'notice' | 'occupied'
+              status: unit.status.toLowerCase() as 'available' | 'notice' | 'occupied',
+              sqft: parseInt(unit.sqFt),
+              parkingNumber: unit.parkingNumber,
+              gasConnection: unit.gasConnection,
+              powerBackup: unit.powerBackup,
+              block: unit.block,
+              meterType: unit.meterType,
+              rentalType: unit.rentalType,
+              rentAmount: unit.rentAmount,
+              securityDeposit: unit.securityDeposit,
+              effectiveFrom: unit.effectiveFrom,
+              effectiveTo: unit.effectiveTo,
+              amenities: unit.amenities
             }))
           });
           
@@ -508,7 +549,7 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
                   <Label htmlFor={name}>{label}</Label>
                   <Input
                     id={name}
-                    disabled={name === "propertyName" || name === "address" || name === "city" || name === "zipCode" || name === "latitude" || name === "longitude"}
+                    // disabled={name === "propertyName" || name === "address" || name === "city" || name === "zipCode" || name === "latitude" || name === "longitude"}
                     type={type}
                     placeholder={label}
                     {...form.register(name, { valueAsNumber: type === "number" })}

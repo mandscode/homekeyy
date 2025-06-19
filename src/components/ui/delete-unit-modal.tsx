@@ -26,7 +26,6 @@ export function DeleteUnitModal({ open, onOpenChange, unitId }: DeleteUnitModalP
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Something went wrong";
-      console.log(message,"message")
         toast({
           title: "Error",
             description: message,

@@ -1,4 +1,3 @@
-"use client"
 import Link from "next/link";
 import { ContentLayout } from "@/components/admin-panel/content-layout";
 import {

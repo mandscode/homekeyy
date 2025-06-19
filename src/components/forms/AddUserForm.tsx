@@ -12,8 +12,7 @@ import { Button } from "@/components/ui/button"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import api from "@/lib/axios"
 import { useEffect, useState } from "react"
-import { useToast } from "@/hooks/use-toast"
-import { Toaster } from "@/components/ui/toaster"
+import { useToast } from "@/components/ui/use-toast"
 import FullScreenLoader from "../utils/FullScreenLoader"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 
@@ -140,7 +139,7 @@ export const formSchema = z.object({
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["service"],
-      message: "Service ID is required for Service Manager role"
+      message: "Service need to be selected for Service Manager role"
     });
   }
 });
@@ -353,10 +352,10 @@ export default function AddUserForm({ setOpen, userId }: { setOpen: (open: boole
 
   const dropdownOptions: Record<string, { label: string; value: string }[]> = {
     role: [
-      { label: "SERVICE_MANAGER", value: "SERVICE_MANAGER" },
-      { label: "PROPERTY_MANAGER", value: "PROPERTY_MANAGER" },
-      { label: "OWNER", value: "OWNER" },
-      { label: "ADMIN", value: "ADMIN" }
+      { label: "Service Provider", value: "SERVICE_MANAGER" },
+      { label: "Property Manager", value: "PROPERTY_MANAGER" },
+      { label: "Owner", value: "OWNER" },
+      { label: "Admin", value: "ADMIN" }
     ],
     status: [
       { label: "Active", value: 'true' },
@@ -377,8 +376,6 @@ export default function AddUserForm({ setOpen, userId }: { setOpen: (open: boole
   return (
     <>
       {loading && <FullScreenLoader />}
-      <Toaster />
-
         <div className="pt-5">
           <form onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-8">
             <div className="grid grid-cols-3 gap-6">

@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppQueryProvider } from "@/providers/QueryClientProvider";
-import { Suspense } from "react"; // ✅ Import Suspense
-import FullScreenLoader from "@/components/utils/FullScreenLoader";
-
+import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,11 +29,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body suppressHydrationWarning className="antialiased">
-        <Suspense fallback={<FullScreenLoader />}>
-          <AppQueryProvider>
-            {children}
-          </AppQueryProvider>
-        </Suspense>
+        <AppQueryProvider>
+          {children}
+          <Toaster />
+        </AppQueryProvider>
       </body>
     </html>
   );

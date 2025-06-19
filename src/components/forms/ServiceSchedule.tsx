@@ -7,6 +7,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import api from "@/lib/axios"
 import { useQuery } from "@tanstack/react-query"
+import { X } from "lucide-react"
 
 interface ScheduleItem {
   serviceType: string
@@ -16,8 +17,8 @@ interface ScheduleItem {
 }
 
 interface ServiceItem {
-  id: number,
-  type: string
+  id: number;
+  type: string;
 }
 
 interface Props {
@@ -56,6 +57,11 @@ export default function ServiceSchedule({ schedulesProps, setSchedulesProps }: P
     queryKey: ["services"],
     queryFn: fetchServices,
   });
+
+  const removeSchedule = (index: number) => {
+    const newSchedules = schedulesProps.filter((_, i) => i !== index);
+    setSchedulesProps(newSchedules);
+  };
 
   return (
     <div className="space-y-3">
@@ -108,19 +114,30 @@ export default function ServiceSchedule({ schedulesProps, setSchedulesProps }: P
               <SelectItem value="Saturday">Saturday</SelectItem>
             </SelectContent>
           </Select>
-
-          {/* Time range */}
-          <div className="flex gap-2">
-            <Input
-              type="time"
-              value={item.startTime}
-              onChange={(e) => updateSchedule(index, "startTime", e.target.value)}
-            />
-            <Input
-              type="time"
-              value={item.endTime}
-              onChange={(e) => handleEndTimeChange(index, e.target.value)}
-            />
+          <div className="flex gap-2 items-center">
+            {/* Time range */}
+            <div className="flex gap-2" style={{ width: '100%' }}>
+              <Input
+                type="time"
+                value={item.startTime}
+                onChange={(e) => updateSchedule(index, "startTime", e.target.value)}
+              />
+              <Input
+                type="time"
+                value={item.endTime}
+                onChange={(e) => handleEndTimeChange(index, e.target.value)}
+              />
+            </div>
+            {/* Delete button */}
+            <Button
+              type="button"
+              onClick={() => removeSchedule(index)}
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       ))}

@@ -1,5 +1,3 @@
-"use client"
-
 // Inspired by react-hot-toast library
 import * as React from "react"
 
@@ -9,7 +7,7 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 5000
+const TOAST_REMOVE_DELAY = 1000000
 
 type ToasterToast = ToastProps & {
   id: string
@@ -18,19 +16,18 @@ type ToasterToast = ToastProps & {
   action?: ToastActionElement
 }
 
+type ActionType = {
+  ADD_TOAST: "ADD_TOAST"
+  UPDATE_TOAST: "UPDATE_TOAST"
+  DISMISS_TOAST: "DISMISS_TOAST"
+  REMOVE_TOAST: "REMOVE_TOAST"
+}
 
 let count = 0
 
 function genId() {
-  count = (count + 1) % Number.MAX_SAFE_INTEGER
+  count = (count + 1) % Number.MAX_VALUE
   return count.toString()
-}
-
-type ActionType = {
-  ADD_TOAST: "ADD_TOAST",
-  UPDATE_TOAST: "UPDATE_TOAST",
-  DISMISS_TOAST: "DISMISS_TOAST",
-  REMOVE_TOAST: "REMOVE_TOAST",
 }
 
 type Action =
@@ -190,4 +187,4 @@ function useToast() {
   }
 }
 
-export { useToast, toast }
+export { useToast, toast } 
