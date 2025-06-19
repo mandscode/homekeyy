@@ -5,11 +5,11 @@ import { Sidebar } from "@/components/admin-panel/sidebar";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useStore } from "@/hooks/use-store";
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import FullScreenLoader from "@/components/utils/FullScreenLoader";
 
-export default function AdminPanelLayout({
+function AdminPanelContent({
   children
 }: {
   children: React.ReactNode;
@@ -51,5 +51,17 @@ export default function AdminPanelLayout({
         <Footer />
       </footer>
     </>
+  );
+}
+
+export default function AdminPanelLayout({
+  children
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense fallback={<FullScreenLoader />}>
+      <AdminPanelContent>{children}</AdminPanelContent>
+    </Suspense>
   );
 }

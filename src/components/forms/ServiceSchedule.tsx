@@ -16,16 +16,6 @@ interface ScheduleItem {
   endTime: string
 }
 
-const daysOfWeek = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday'
-] as const;
-
 interface ServiceItem {
   id: number;
   type: string;

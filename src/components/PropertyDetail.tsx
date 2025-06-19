@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Trash2, X } from 'lucide-react';
+import { Clock, X } from 'lucide-react';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
