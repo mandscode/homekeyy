@@ -294,6 +294,7 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
     setLoading(true)
     
     try {
+      
       const propertyImages: UploadImage[] = images.map((file) => ({
         file,
         name: file.name,
@@ -323,7 +324,7 @@ export default function PropertyUpdateForm({ propertyId, onSuccess }: PropertyUp
           startTime: schedule.startTime,
           endTime: schedule.endTime
         })),
-        images: [...data.images, ...uploadedPropertyImages].map(img => ({
+        images: [ ...uploadedPropertyImages].map(img => ({
           url: img.url,
           alt: 'property-image'
         })),

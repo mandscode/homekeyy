@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
-import { Clock } from 'lucide-react';
+import { Clock, Trash2, X } from 'lucide-react';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
@@ -13,6 +13,7 @@ import { useParams } from 'next/navigation';
 import { UnitModal } from './ui/unit-modal';
 import apiEndpoints from '@/lib/apiEndpoints';
 import { DeleteUnitModal } from './ui/delete-unit-modal';
+import { toast } from '@/components/ui/use-toast';
 
 type Amenity = {
   id: number;
@@ -115,6 +116,7 @@ export default function PropertyDetail() {
   const [unitId, setUnitId] = useState<number>()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteUnitId, setDeleteUnitId] = useState<number>()
+  const [deletingImage, setDeletingImage] = useState<string | null>(null)
   
   const params = useParams();
   const id = params.id as string;
@@ -182,6 +184,33 @@ export default function PropertyDetail() {
     {}
   );
 
+  // Function to delete property image
+  const deletePropertyImage = async (imageUrl: string) => {
+    try {
+      setDeletingImage(imageUrl);
+      await api.delete('/web/unit/image', {
+        data: { propertyImageUrl: imageUrl, propertyId: id }
+      });
+      
+      toast({
+        title: "Success",
+        description: "Image deleted successfully",
+      });
+      
+      // Invalidate the property query to refresh the data
+      queryClient.invalidateQueries({ queryKey: ["property", id] });
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete image",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingImage(null);
+    }
+  };
+
   // const handleImageChange = (number: string, files: FileList | null) => {
   //   if (!files) return;
   
@@ -236,7 +265,7 @@ export default function PropertyDetail() {
         <h3 className="font-medium mb-2">Images</h3>
         <div className="flex gap-4 flex-wrap">
           {(property?.images || []).map((img, idx) => (
-            <div key={idx} className="w-28 h-28 overflow-hidden rounded relative bg-gray-100">
+            <div key={idx} className="w-28 h-28 overflow-hidden rounded relative bg-gray-100 group">
               <Image
                 src={img.url}
                 alt={img.alt || 'Property image'}
@@ -249,6 +278,22 @@ export default function PropertyDetail() {
                 }}
                 unoptimized
               />
+              {/* Delete button overlay */}
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-8 w-8 p-0 rounded-full"
+                  onClick={() => deletePropertyImage(img.url)}
+                  disabled={deletingImage === img.url}
+                >
+                  {deletingImage === img.url ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  ) : (
+                    <X size={16} />
+                  )}
+                </Button>
+              </div>
             </div>
           ))}
           {(!property?.images || property.images.length === 0) && (

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { FileIcon, Upload, CheckCircle } from "lucide-react";
@@ -61,6 +62,7 @@ interface FlatDetailsUploadProps {
 }
 
 export function FlatDetailsUpload({ onFlatsUploaded }: FlatDetailsUploadProps) {
+  const [flats, setFlats] = useState<FlatDetails[]>([]);
   const [amenities, setAmenities] = useState<Amenities[]>([]);
   const [uploaded, setUploaded] = useState(false);
   const { toast } = useToast();
@@ -154,6 +156,8 @@ export function FlatDetailsUpload({ onFlatsUploaded }: FlatDetailsUploadProps) {
             amenities: validFlatAmenities,
           } as FlatDetails;
         });
+        console.log(validatedData, "validatedData")
+        setFlats(validatedData);
         setUploaded(true);
         onFlatsUploaded(validatedData);
         

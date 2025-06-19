@@ -74,7 +74,7 @@ export function AmenitiesList() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     fetchAmenities();

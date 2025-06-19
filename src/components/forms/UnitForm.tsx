@@ -17,6 +17,7 @@ import FullScreenLoader from "../utils/FullScreenLoader"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 import Image from "next/image"
 import QuantitySelector from "../utils/QuantitySelector"
+import { X } from "lucide-react"
 
 type Amenity = {
   id: number;
@@ -117,6 +118,7 @@ interface UnitFormProps {
 export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
   const [loading, setLoading] = useState(false)
   const [images, setImages] = useState<File[]>([])
+  const [deletingImage, setDeletingImage] = useState<string | null>(null)
   const { toast } = useToast()
   const queryClient = useQueryClient();
   const form = useForm<UnitFormData>({
@@ -387,6 +389,33 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
     { name: "meterType", label: "Meter Type", type: "select", options: meterTypeOptions }
   ];
 
+  // Function to delete unit image
+  const deleteUnitImage = async (imageUrl: string) => {
+    try {
+      setDeletingImage(imageUrl);
+      await api.delete('/web/unit/image', {
+        data: { unitImageUrl: imageUrl }
+      });
+      
+      toast({
+        title: "Success",
+        description: "Image deleted successfully",
+      });
+      
+      // Invalidate the unit query to refresh the data
+      queryClient.invalidateQueries({ queryKey: ["unit", unitId] });
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete image",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingImage(null);
+    }
+  };
+
   if (isLoadingUnit) {
     return <FullScreenLoader />;
   }
@@ -435,25 +464,7 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
               <div className="flex flex-col gap-3">
                 <Label>Amenities</Label>
                 <div className="grid grid-cols-3 gap-4">
-                {/* {unitData?.unitAmenities?.map((item:  UnitAmenity) => {
-                    const currentAmenities = form.watch("amenities") || [];
-                    const isChecked = currentAmenities.some(a => a.id === item.id);
-                    return (
-                      <label key={item.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          checked={isChecked}
-                          onCheckedChange={(checked) => {
-                            const updated = checked
-                              ? [...currentAmenities, { id: item.id, name: item.name, value: "true" }]
-                              : currentAmenities.filter((a: Amenity) => a.id !== item.id);
-                            form.setValue("amenities", updated);
-                          }}
-                        />
-                        <span>{item.name}</span>
-                      </label>
-                    );
-                  })} */}
-                  {unitData?.unitAmenities?.map((item:  UnitAmenity) => {
+                {unitData?.unitAmenities?.map((item:  UnitAmenity) => {
                     const currentAmenities = form.watch("amenities") || [];
                     const currentAmenity = currentAmenities.find((a: Amenity) => a.id === item.id);
                     const quantity = currentAmenity ? parseInt(currentAmenity.value) || 0 : 0;
@@ -510,7 +521,7 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
               <div className="flex flex-wrap gap-4">
                 {/* Show existing images */}
                 {unitData?.images?.map((img: FlatImage, idx: number) => (
-                  <div key={`existing-${idx}`} className="w-28 h-28 overflow-hidden rounded relative bg-gray-100">
+                  <div key={`existing-${idx}`} className="w-28 h-28 overflow-hidden rounded relative bg-gray-100 group">
                     <Image
                       src={img.url}
                       alt={img.alt || 'Unit image'}
@@ -523,6 +534,22 @@ export default function UnitForm({ unitId, onOpenChange }: UnitFormProps) {
                       }}
                       unoptimized
                     />
+                    {/* Delete button overlay */}
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-8 w-8 p-0 rounded-full"
+                        onClick={() => deleteUnitImage(img.url)}
+                        disabled={deletingImage === img.url}
+                      >
+                        {deletingImage === img.url ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        ) : (
+                          <X size={16} />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 

@@ -70,13 +70,16 @@ export default function FlatsUpload({
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploaded, setUploaded] = useState(false)
+  const [existingFlats, setExistingFlats] = useState([])
   const [amenities, setAmenities] = useState<Amenities[]>([])
   // Fetch existing flats for the property
 
   useEffect(() => {
     const fetchFlats = async () => {
+      const res = await api.get(`/web/property/${propertyId}`);
       const resAmenities = await api.get(`/web/amenity`);
       setAmenities(resAmenities.data.amenities)
+      setExistingFlats(res.data.property.units || []);
     }
     fetchFlats()
   }, [propertyId])
@@ -175,7 +178,6 @@ export default function FlatsUpload({
           description: "Excel file uploaded successfully",
         });
       } catch (error) {
-        console.log(error, "error")
         toast({
           title: "Error",
           description: "Failed to process Excel file",
