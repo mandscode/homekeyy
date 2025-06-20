@@ -154,7 +154,6 @@ export function FlatDetailsUpload({ onFlatsUploaded }: FlatDetailsUploadProps) {
             amenities: validFlatAmenities,
           } as FlatDetails;
         });
-        console.log(validatedData, "validatedData")
         setUploaded(true);
         onFlatsUploaded(validatedData);
         

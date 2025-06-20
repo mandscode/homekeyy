@@ -62,7 +62,6 @@ type FlatStatus = 'AVAILABLE' | 'BOOKED' | 'OCCUPIED' | 'NOTICE_PERIOD';
 
 export default function FlatsUpload({
   setFlats,
-  propertyId
 }: {
   flats?: FlatDetailsResponse[]
   setFlats: React.Dispatch<React.SetStateAction<FlatDetailsResponse[]>>
@@ -74,12 +73,12 @@ export default function FlatsUpload({
   // Fetch existing flats for the property
 
   useEffect(() => {
-    const fetchFlats = async () => {
+    const fetchAmenities = async () => {
       const resAmenities = await api.get(`/web/amenity`);
       setAmenities(resAmenities.data.amenities)
     }
-    fetchFlats()
-  }, [propertyId])
+    fetchAmenities()
+  }, [])
 
 
   const handleUploadClick = () => {
@@ -175,7 +174,7 @@ export default function FlatsUpload({
           description: "Excel file uploaded successfully",
         });
       } catch (error) {
-        console.log(error)
+        console.log(error instanceof Error ? error.message : 'Unknown error', "error")
         toast({
           title: "Error",
           description: "Failed to process Excel file",
